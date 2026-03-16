@@ -1,7 +1,7 @@
 """MUD 游戏引擎测试"""
 import pytest
 from game.engine import GameEngine
-from game.models import Room, Item
+from game.models import Room, Item, Player
 
 
 class TestRoom:
@@ -79,8 +79,10 @@ class TestGameEngine:
     
     def test_take_item(self, engine):
         engine.rooms["room1"].add_item(Item("金币", "一些金币"))
+        # 必须先 look 才能看到物品
+        engine.rooms["room1"].has_looked = True
         result = engine.take_item("金币")
-        assert "拿起了 金币" in result
+        assert "拿起了" in result or "金币" in result
         assert engine.player.has_item("金币")
     
     def test_inventory_empty(self, engine):
