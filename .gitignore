@@ -12,6 +12,7 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+.pytest_cache/
 
 # IDE
 .vscode/
@@ -20,4 +21,6 @@ htmlcov/
 *.swo
 
 # Game saves
-*.json
+savegame*.json
+game_save*.json
+*.save.json
