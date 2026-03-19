@@ -1,4 +1,6 @@
 """命令处理器"""
+import re
+
 from .engine import GameEngine
 
 
@@ -49,17 +51,45 @@ class CommandHandler:
     
     def handle(self, user_input: str) -> str:
         """处理用户输入"""
-        parts = user_input.strip().lower().split()
-        if not parts:
+        command, args = self._parse_input(user_input)
+        if not command:
             return "💭 请输入命令。输入 'help' 查看帮助。"
-        
-        command = parts[0]
-        args = parts[1:]
-        
+
         if command in self.commands:
             return self.commands[command](args)
         else:
             return f"❓ 未知命令：{command}。输入 'help' 查看帮助。"
+
+    def _parse_input(self, user_input: str) -> tuple[str, list[str]]:
+        """解析命令并容错常见输入格式。"""
+        text = user_input.strip().lower()
+        if not text:
+            return "", []
+
+        # 支持 take<铁剑> / take <铁剑> / use<生命药水>
+        angle_match = re.match(r"^([a-z]+)\s*<\s*(.*?)\s*>$", text)
+        if angle_match:
+            cmd = angle_match.group(1)
+            arg = angle_match.group(2).strip()
+            return cmd, [arg] if arg else []
+
+        parts = text.split()
+        if not parts:
+            return "", []
+
+        cmd = parts[0]
+        args = parts[1:]
+
+        # 支持 take铁剑 / use生命药水 这类命令与参数黏连输入
+        for verb in ("take", "get", "pick", "use", "go"):
+            if cmd.startswith(verb) and cmd != verb:
+                suffix = cmd[len(verb):].strip()
+                cmd = verb
+                if suffix:
+                    args = [suffix] + args
+                break
+
+        return cmd, args
     
     def cmd_go(self, args: list) -> str:
         if not args:
@@ -87,7 +117,8 @@ class CommandHandler:
     def cmd_take(self, args: list) -> str:
         if not args:
             return "拿什么？用法：take <物品名>"
-        item_name = " ".join(args)
+        item_name = " ".join(args).strip()
+        item_name = item_name.strip("<>").strip()
         return self.engine.take_item(item_name)
     
     def cmd_inventory(self, args: list) -> str:
@@ -96,7 +127,8 @@ class CommandHandler:
     def cmd_use(self, args: list) -> str:
         if not args:
             return "使用什么？用法：use <物品名>"
-        item_name = " ".join(args)
+        item_name = " ".join(args).strip()
+        item_name = item_name.strip("<>").strip()
         return self.engine.use_item(item_name)
     
     def cmd_attack(self, args: list) -> str:

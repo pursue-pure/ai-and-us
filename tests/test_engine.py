@@ -1,4 +1,5 @@
 """MUD 游戏引擎测试"""
+import json
 import pytest
 from game.engine import GameEngine
 from game.models import Room, Item, Player
@@ -76,6 +77,10 @@ class TestGameEngine:
     def test_move_player_invalid_direction(self, engine):
         result = engine.move_player("west")
         assert "不能往 west 走" in result
+
+    def test_boss_direction_for_treasure_should_be_north(self, engine):
+        engine.player.current_room = "treasure"
+        assert engine.get_boss_direction() == "north"
     
     def test_take_item(self, engine):
         engine.rooms["room1"].add_item(Item("金币", "一些金币"))
@@ -93,6 +98,45 @@ class TestGameEngine:
         engine.player.add_item(Item("剑", "一把剑"))
         result = engine.show_inventory()
         assert "剑" in result
+
+    def test_respawn_back_to_checkpoint(self, engine, tmp_path):
+        # 先移动并保存，形成固定检查点
+        engine.move_player("north")
+        save_file = tmp_path / "checkpoint_save.json"
+        engine.save_game(str(save_file))
+
+        checkpoint_room = engine.checkpoint_room_id
+        checkpoint_time = engine.checkpoint_time
+
+        # 模拟死亡
+        engine.player.hp = 0
+        engine.player.is_alive = False
+        engine.player.current_room = "room1"
+
+        result = engine.respawn()
+
+        assert checkpoint_room == "room2"
+        assert engine.player.current_room == checkpoint_room
+        assert "回到检查点" in result
+        assert checkpoint_time in result
+
+    def test_load_restore_checkpoint_meta(self, engine, tmp_path):
+        engine.move_player("north")
+        save_file = tmp_path / "checkpoint_meta.json"
+        engine.save_game(str(save_file))
+
+        # 污染内存中的检查点，再通过 load 恢复
+        engine.checkpoint_room_id = "room1"
+        engine.checkpoint_time = "2000-01-01 00:00:00"
+
+        engine.load_game(str(save_file))
+
+        assert engine.checkpoint_room_id == "room2"
+        assert engine.checkpoint_time != "2000-01-01 00:00:00"
+
+        with open(save_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        assert data["meta"]["checkpoint_room_id"] == "room2"
 
 
 class TestCommandHandler:
@@ -123,3 +167,27 @@ class TestCommandHandler:
     def test_empty_input(self, handler):
         result = handler.handle("")
         assert "请输入命令" in result
+
+    def test_take_with_angle_brackets(self, handler):
+        handler.engine.rooms["start"].add_item(Item("铁剑", "一把锋利的铁剑", "weapon", 8))
+        handler.engine.rooms["start"].has_looked = True
+
+        result = handler.handle("take <铁剑>")
+        assert "拿起了" in result
+        assert handler.engine.player.has_item("铁剑")
+
+    def test_take_without_space_before_brackets(self, handler):
+        handler.engine.rooms["start"].add_item(Item("铁剑", "一把锋利的铁剑", "weapon", 8))
+        handler.engine.rooms["start"].has_looked = True
+
+        result = handler.handle("take<铁剑>")
+        assert "拿起了" in result
+        assert handler.engine.player.has_item("铁剑")
+
+    def test_take_compact_command(self, handler):
+        handler.engine.rooms["start"].add_item(Item("铁剑", "一把锋利的铁剑", "weapon", 8))
+        handler.engine.rooms["start"].has_looked = True
+
+        result = handler.handle("take铁剑")
+        assert "拿起了" in result
+        assert handler.engine.player.has_item("铁剑")

@@ -3,6 +3,11 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 
+def _normalize_item_name(name: str) -> str:
+    """规范化物品名，提升输入容错。"""
+    return name.strip().lower().strip("<>").replace(" ", "")
+
+
 @dataclass
 class Item:
     """物品"""
@@ -51,8 +56,9 @@ class Room:
         self.items.append(item)
     
     def remove_item(self, item_name: str) -> Optional[Item]:
+        target_name = _normalize_item_name(item_name)
         for i, item in enumerate(self.items):
-            if item.name.lower() == item_name.lower():
+            if _normalize_item_name(item.name) == target_name:
                 return self.items.pop(i)
         return None
     
@@ -86,7 +92,8 @@ class Player:
         self.inventory.append(item)
     
     def has_item(self, item_name: str) -> bool:
-        return any(item.name.lower() == item_name.lower() for item in self.inventory)
+        target_name = _normalize_item_name(item_name)
+        return any(_normalize_item_name(item.name) == target_name for item in self.inventory)
     
     def get_attack_power(self) -> int:
         """获取总攻击力（基础 + 装备）"""
@@ -115,8 +122,9 @@ class Player:
     
     def use_item(self, item_name: str) -> Optional[str]:
         """使用物品，返回使用效果描述"""
+        target_name = _normalize_item_name(item_name)
         for i, item in enumerate(self.inventory):
-            if item.name.lower() == item_name.lower():
+            if _normalize_item_name(item.name) == target_name:
                 if item.item_type == "potion":
                     healed = self.heal(item.effect)
                     self.inventory.pop(i)

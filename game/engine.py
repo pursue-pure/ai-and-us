@@ -1,5 +1,6 @@
 """MUD 游戏核心引擎"""
-from typing import Dict, Optional, Tuple
+from datetime import datetime
+from typing import Dict, Optional
 from .models import Room, Player, Item, Enemy
 
 
@@ -11,7 +12,7 @@ class GameEngine:
         "entrance": "north",
         "hall": "east",
         "goblin_camp": "east",
-        "treasure": "west",
+        "treasure": "north",
         "orc_hall": "north",
         "armory": "north",
     }
@@ -22,6 +23,36 @@ class GameEngine:
         self.running = False
         self.game_won = False
         self.game_over = False
+        self.checkpoint_room_id = ""
+        self.checkpoint_time = ""
+        self.last_death_time = ""
+        self.last_respawn_time = ""
+
+    def _now_str(self) -> str:
+        """返回当前时间（用于存档和复活日志）。"""
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    def _resolve_checkpoint_room(self) -> str:
+        """解析可用检查点房间。"""
+        if self.checkpoint_room_id in self.rooms:
+            return self.checkpoint_room_id
+        if "entrance" in self.rooms:
+            return "entrance"
+        if self.player and self.player.last_room in self.rooms:
+            return self.player.last_room
+        if self.player and self.player.current_room in self.rooms:
+            return self.player.current_room
+        if self.rooms:
+            return next(iter(self.rooms))
+        return ""
+
+    def update_checkpoint(self, room_id: Optional[str] = None) -> None:
+        """更新检查点（固定地点 + 固定时间）。"""
+        if room_id and room_id in self.rooms:
+            self.checkpoint_room_id = room_id
+        elif self.player and self.player.current_room in self.rooms:
+            self.checkpoint_room_id = self.player.current_room
+        self.checkpoint_time = self._now_str()
     
     def add_room(self, room: Room) -> None:
         """添加房间到游戏世界"""
@@ -32,6 +63,7 @@ class GameEngine:
         if start_room not in self.rooms:
             raise ValueError(f"房间 {start_room} 不存在")
         self.player = Player(name=name, current_room=start_room)
+        self.update_checkpoint(start_room)
         return self.player
     
     def get_current_room(self) -> Optional[Room]:
@@ -213,7 +245,7 @@ class GameEngine:
             if self.player.xp >= self.player.level * 50:
                 self.player.level_up()
                 result.append(f"⭐ 升级了！当前等级：LV.{self.player.level}")
-                result.append(f"   HP +20, 攻击 +5")
+                result.append(f"   最大生命值 HP +20，且生命值已回满；攻击 +5")
             
             # 检查是否是 BOSS
             if room.is_boss_room:
@@ -232,9 +264,10 @@ class GameEngine:
             result.append(f"   你的 HP: {self.player.hp}/{self.player.max_hp}")
             
             if not self.player.is_alive:
+                self.last_death_time = self._now_str()
                 result.append("")
                 result.append("💀 你被打败了...")
-                result.append(f"你将在上一个房间复活。输入 'respawn' 继续游戏。")
+                result.append("你将回档到检查点。输入 'respawn' 继续游戏。")
         
         return "\n".join(result)
     
@@ -246,19 +279,21 @@ class GameEngine:
         if self.player.is_alive:
             return "你还活着，不需要复活。"
         
-        # 复活到上一个房间
-        if self.player.last_room and self.player.last_room in self.rooms:
-            self.player.current_room = self.player.last_room
-            self.player.hp = self.player.max_hp // 2  # 复活时恢复一半 HP
-            self.player.is_alive = True
-            room = self.get_current_room()
-            return f"✨ 你复活了！出现在 {room.name}，HP 恢复到 {self.player.hp}/{self.player.max_hp}"
-        else:
-            # 没有上一个房间，复活到起点
-            self.player.current_room = "entrance"
-            self.player.hp = self.player.max_hp // 2
-            self.player.is_alive = True
-            return f"✨ 你复活了！出现在洞穴入口，HP 恢复到 {self.player.hp}/{self.player.max_hp}"
+        checkpoint_room_id = self._resolve_checkpoint_room()
+        if not checkpoint_room_id:
+            return "❌ 复活失败：当前没有可用检查点。"
+
+        self.player.current_room = checkpoint_room_id
+        self.player.hp = self.player.max_hp // 2
+        self.player.is_alive = True
+        self.last_respawn_time = self._now_str()
+
+        room = self.get_current_room()
+        checkpoint_time = self.checkpoint_time or "未知时间"
+        return (
+            f"✨ 你复活了！回到检查点：{room.name}（记录时间：{checkpoint_time}）\n"
+            f"HP 恢复到 {self.player.hp}/{self.player.max_hp}"
+        )
     
     def show_stats(self) -> str:
         """显示玩家状态"""
@@ -273,6 +308,9 @@ class GameEngine:
         if not self.player:
             return "游戏未开始。"
         
+        # 每次手动保存都更新检查点位置和时间
+        self.update_checkpoint()
+
         data = {
             "player": {
                 "name": self.player.name,
@@ -287,6 +325,12 @@ class GameEngine:
                     {"name": item.name, "type": item.item_type, "effect": item.effect}
                     for item in self.player.inventory
                 ]
+            },
+            "meta": {
+                "checkpoint_room_id": self.checkpoint_room_id,
+                "checkpoint_time": self.checkpoint_time,
+                "last_death_time": self.last_death_time,
+                "last_respawn_time": self.last_respawn_time,
             },
             "rooms": {}
         }
@@ -339,6 +383,21 @@ class GameEngine:
             for room_id, room_data in data.get("rooms", {}).items():
                 if room_id in self.rooms:
                     self.rooms[room_id].has_looked = room_data.get("has_looked", False)
+
+            # 恢复检查点和死亡/复活时间
+            meta_data = data.get("meta", {})
+            loaded_checkpoint_room = meta_data.get("checkpoint_room_id", "")
+            if loaded_checkpoint_room in self.rooms:
+                self.checkpoint_room_id = loaded_checkpoint_room
+            else:
+                self.checkpoint_room_id = self.player.current_room
+
+            self.checkpoint_time = meta_data.get("checkpoint_time", "")
+            if not self.checkpoint_time:
+                self.checkpoint_time = self._now_str()
+
+            self.last_death_time = meta_data.get("last_death_time", "")
+            self.last_respawn_time = meta_data.get("last_respawn_time", "")
             
             return f"💾 游戏已从 {filename} 加载。欢迎回来，{self.player.name}！"
         except FileNotFoundError:
