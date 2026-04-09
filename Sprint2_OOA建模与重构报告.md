@@ -414,26 +414,26 @@ sequenceDiagram
 - `WorldBuilder`
   - 负责创建地图、房间、敌人、物品，脱离 `main.py`。
 
-#### 2. 继承
+#### 2. 继承（可选增强项）
 
-计划让“物品效果”和“可战斗对象”具备更清晰的继承结构：
+“物品效果”和“可战斗对象”的继承化建模作为可选增强方案，不作为 Sprint 2 必做项：
 
 - 抽象基类 `BaseItem`
   - 子类：`WeaponItem`、`PotionItem`、`ToolItem`
 - 抽象基类 `Combatant`
   - 子类：`PlayerCharacter`、`EnemyCharacter`
 
-这样可以把共通属性和受伤、治疗、攻击接口沉淀到父类。
+该方案的价值是把共通属性和受伤、治疗、攻击接口沉淀到父类；但若当前迭代目标是低风险重构，可先保留现有实体并通过服务层完成解耦。
 
-#### 3. 多态
+#### 3. 多态（分阶段推进）
 
-计划消除 `item_type` 条件分支，改为多态调用：
+计划逐步消除 `item_type` 条件分支，优先通过服务层收口逻辑，再按需求引入多态调用：
 
 - `PotionItem.apply(player)` 负责回血
 - `WeaponItem.apply(player)` 负责装备或提供攻击增益
 - 未来可直接扩展 `BuffItem.apply(player)`、`TeleportItem.apply(player)`，无需修改旧逻辑
 
-对于敌人行为也可进一步引入多态：
+对于敌人行为可在后续版本引入多态：
 
 - `GoblinEnemy.counter_attack()`
 - `OrcEnemy.counter_attack()`
@@ -441,26 +441,23 @@ sequenceDiagram
 
 未来若加入“灼烧”“二连击”“护甲穿透”，只需扩展子类行为，而非不断修改统一大函数。
 
-### 8.3 建议的重构后结构
+### 8.3 建议的重构后结构（目标态）
 
 ```text
 game/
 ├── main.py                  # 启动入口
-├── world_builder.py         # 地图与世界装配
 ├── engine.py                # 轻量编排器，仅协调服务
 ├── commands.py              # 命令解析
-├── models/
-│   ├── player.py
-│   ├── room.py
-│   ├── item.py
-│   └── enemy.py
+├── models.py                # 当前实体定义（后续可按需拆分）
 ├── services/
 │   ├── combat_service.py
 │   ├── inventory_service.py
-│   ├── movement_service.py
 │   └── checkpoint_service.py
-└── repositories/
+└── infrastructure/
+    ├── world_builder.py
     └── json_save_repository.py
+
+说明：以上为目标态目录。当前仓库以渐进重构为主，不要求在 Sprint 2 一次性完成实体文件拆分。
 ```
 
 ### 8.4 Sprint 2 分阶段实施计划
