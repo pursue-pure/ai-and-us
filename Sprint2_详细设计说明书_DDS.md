@@ -1,7 +1,7 @@
 # Sprint 2 详细设计说明书（DDS）
 
-> 文档定位：本说明书面向 Sprint 2 中“高耦合遗留代码重构”成果归档，重点描述重构后核心控制类、关键算法流程及跨类调用接口规范，供团队后续开发、维护与测试对照使用。  
-> 适用范围：`ai-and-us` 控制台 MUD 游戏在 Sprint 2 的目标重构架构。  
+> 文档定位：本说明书面向 Sprint 2 中“高耦合遗留代码重构”的目标设计与阶段性成果归档，重点描述核心控制类、关键算法流程及跨类调用接口规范，供团队后续开发、维护与测试对照使用。  
+> 适用范围：`ai-and-us` 控制台 MUD 游戏在 Sprint 2 的目标重构架构（含部分已落地实现）。  
 > 关联文档：`Sprint2_OOA建模与重构报告.md`、`Sprint2_Scrum回顾报告.md`
 
 ## 1. 文档基本信息
@@ -32,6 +32,12 @@
 - 业务控制层：`CombatService`、`InventoryService`、`CheckpointService`
 - 基础设施层：`WorldBuilder`、`JsonSaveRepository`
 
+### 2.1.1 当前落地状态（截至 2026-04-09）
+
+- 已落地：`GameEngine`（部分薄化）、`CombatService`、`CombatResult`、命令解析兼容能力（由 `CommandHandler` 提供）
+- 待落地：`InventoryService`、`CheckpointService`、`JsonSaveRepository`、`WorldBuilder`、`LegacyCommandAdapter`
+- 说明：本 DDS 的其余章节保留目标态接口定义，作为 Sprint 3 的实现基线。
+
 ### 2.2 核心协作关系
 
 ```text
@@ -58,7 +64,7 @@ GameEngine (Facade)
 | 策略模式 | `CombatResolutionStrategy`、`ItemEffectStrategy` | 替代分支驱动的行为判断 |
 | 外观模式 | `GameEngine` | 对外提供统一入口，对内协调多个服务 |
 
-## 3. 核心控制类详细设计
+## 3. 核心控制类详细设计（目标态）
 
 > 说明：本节只聚焦本次重构提取出的核心控制类，不重复展开实体类 `Player`、`Room`、`Item`、`Enemy` 的基础字段。
 
@@ -228,7 +234,7 @@ GameEngine (Facade)
 | `parse(user_input)` | 解析紧凑命令、尖括号输入与方向命令 |
 | `dispatch(command, args)` | 根据命令分派到引擎能力 |
 
-## 4. 跨类调用方法签名规范
+## 4. 跨类调用方法签名规范（目标态）
 
 ### 4.1 GameEngine 对外方法签名
 
@@ -447,7 +453,7 @@ GameEngine (Facade)
 - 异常：
   - `ValueError`：命令语法完全非法
 
-## 5. 关键算法 N-S 盒图
+## 5. 关键算法 N-S 盒图（目标态）
 
 > 说明：本节采用 N-S 盒图归档关键控制算法，图中使用“顺序 / 条件 / 循环”描述与代码流程一一对应。
 
@@ -564,4 +570,4 @@ GameEngine (Facade)
 ---
 
 **DDS 更新结论**  
-本次详细设计说明书完成了 Sprint 2 重构成果的核心控制类归档、关键算法流程固化和跨类接口标准化，能够为后续代码落地、测试编写和维护协作提供统一依据。
+本次详细设计说明书完成了 Sprint 2 重构目标与阶段性成果的统一归档，明确了已落地能力与待落地接口，可作为 Sprint 3 代码落地、测试编写和维护协作的统一依据。
