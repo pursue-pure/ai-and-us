@@ -1,0 +1,896 @@
+openapi: 3.0.3
+info:
+  title: MUD 洞穴探险游戏 API
+  description: |
+    本契约定义 `ai-and-us` 控制台 MUD 游戏的全量业务接口，覆盖场景探索、物品管理、
+    战斗结算、检查点复活与存读档五大模块。
+    作为 Sprint 3 Mock 开发与集成联调的法定依据，前端可通过 Prism 挂载本文件
+    在后端未就绪前完成展现层逻辑闭环。
+  version: "1.0.0"
+  contact:
+    name: ai-and-us 开发团队
+
+servers:
+  - url: http://localhost:8000
+    description: 本地开发服务器（Prism Mock）
+
+tags:
+  - name: session
+    description: 游戏会话管理
+  - name: scene
+    description: 场景探索与移动
+  - name: inventory
+    description: 物品与背包管理
+  - name: combat
+    description: 战斗与状态结算
+  - name: checkpoint
+    description: 检查点与复活
+  - name: save
+    description: 存档与读档
+
+paths:
+
+  # ─────────────────────────────────────────
+  # 游戏会话
+  # ─────────────────────────────────────────
+  /session:
+    post:
+      tags: [session]
+      summary: 创建新游戏会话
+      description: 初始化游戏世界，创建玩家，返回初始房间描述与玩家状态。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [player_name]
+              properties:
+                player_name:
+                  type: string
+                  example: 冒险者
+            example:
+              player_name: 冒险者
+      responses:
+        "201":
+          description: 会话创建成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionCreatedResponse'
+              example:
+                session_id: "sess-001"
+                player:
+                  name: 冒险者
+                  hp: 50
+                  max_hp: 50
+                  attack: 10
+                  level: 1
+                  xp: 0
+                  inventory: []
+                room:
+                  id: entrance
+                  name: 🕳️ 洞穴入口
+                  description: 你站在一个阴暗潮湿的洞穴入口。
+                  exits: { north: hall }
+                  has_enemy: false
+                  boss_direction: north
+                message: 游戏开始！输入 look 搜索房间。
+        "400":
+          $ref: '#/components/responses/BadRequest'
+
+  /session/{session_id}:
+    get:
+      tags: [session]
+      summary: 获取当前会话状态
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        "200":
+          description: 当前玩家与房间状态
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionStateResponse'
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [session]
+      summary: 结束游戏会话
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        "200":
+          description: 会话已结束
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+              example:
+                message: 感谢游玩，再见！
+
+  # ─────────────────────────────────────────
+  # 场景探索与移动
+  # ─────────────────────────────────────────
+  /session/{session_id}/move:
+    post:
+      tags: [scene]
+      summary: 向指定方向移动
+      description: |
+        玩家向指定方向移动到相邻房间。
+        - 方向无效时返回 400 并附带出口提示与 BOSS 方向提示。
+        - 玩家死亡状态下无法移动，返回 409。
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [direction]
+              properties:
+                direction:
+                  type: string
+                  enum: [north, south, east, west]
+                  example: north
+      responses:
+        "200":
+          description: 移动成功，返回新房间描述
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoveResponse'
+              example:
+                message: 你前往north...
+                room:
+                  id: hall
+                  name: 📍 阴暗走廊
+                  description: 这是一个狭窄的地下走廊。
+                  exits: { south: entrance, east: goblin_camp }
+                  has_enemy: false
+                  boss_direction: east
+                enemy_alert: null
+        "400":
+          description: 方向无效
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: invalid_direction
+                message: 不能往 west 走。出口：north
+                boss_direction: north
+        "409":
+          description: 玩家已死亡，无法移动
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: player_dead
+                message: 你已经死了，无法移动。输入 respawn 复活。
+
+  /session/{session_id}/look:
+    post:
+      tags: [scene]
+      summary: 搜索当前房间
+      description: |
+        执行 look 命令，标记房间为已搜索状态，返回房间内物品列表。
+        未执行 look 前，take 命令无法拾取物品。
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        "200":
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookResponse'
+              example:
+                message: 你仔细搜索了 📍 阴暗走廊...
+                items:
+                  - name: 生命药水
+                    description: 一瓶红色的药水
+                    item_type: potion
+                    effect: 25
+
+  # ─────────────────────────────────────────
+  # 物品与背包管理
+  # ─────────────────────────────────────────
+  /session/{session_id}/inventory:
+    get:
+      tags: [inventory]
+      summary: 查看背包
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        "200":
+          description: 背包内容
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryResponse'
+              example:
+                items:
+                  - name: 铁剑
+                    description: 一把锋利的铁剑
+                    item_type: weapon
+                    effect: 8
+                message: 背包中有 1 件物品。
+
+  /session/{session_id}/inventory/take:
+    post:
+      tags: [inventory]
+      summary: 拾取物品
+      description: |
+        从当前房间拾取指定物品。
+        - 必须先执行 look，否则返回 403。
+        - 物品不存在时返回 404。
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_name]
+              properties:
+                item_name:
+                  type: string
+                  example: 铁剑
+      responses:
+        "200":
+          description: 拾取成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TakeResponse'
+              example:
+                message: 你拿起了 铁剑。
+                item:
+                  name: 铁剑
+                  description: 一把锋利的铁剑
+                  item_type: weapon
+                  effect: 8
+                player_attack: 18
+        "403":
+          description: 尚未搜索房间
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: not_looked
+                message: 你还没有搜索这个房间，先输入 look。
+        "404":
+          description: 物品不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: item_not_found
+                message: 这里没有 铁剑。
+
+  /session/{session_id}/inventory/use:
+    post:
+      tags: [inventory]
+      summary: 使用物品
+      description: |
+        使用背包中的指定物品。
+        - 药水：消耗后恢复 HP，返回实际恢复量。
+        - 武器：显示装备提示（武器不消耗，持续提供攻击加成）。
+        - 工具类物品无效果时返回 400。
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [item_name]
+              properties:
+                item_name:
+                  type: string
+                  example: 生命药水
+      responses:
+        "200":
+          description: 使用成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UseItemResponse'
+              example:
+                message: 你使用了 生命药水，恢复了 25 点 HP。
+                player_hp: 50
+                player_max_hp: 50
+                healed: 25
+        "400":
+          description: 物品无法使用
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: item_not_usable
+                message: 火把 无法直接使用。
+        "404":
+          description: 背包中无此物品
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: item_not_found
+                message: 背包中没有 生命药水。
+
+  # ─────────────────────────────────────────
+  # 战斗与状态结算
+  # ─────────────────────────────────────────
+  /session/{session_id}/attack:
+    post:
+      tags: [combat]
+      summary: 攻击当前房间的敌人
+      description: |
+        对当前房间存活的敌人发起一轮攻击。
+        - 无敌人时返回 400。
+        - 玩家死亡时返回 409。
+        - 击败普通敌人返回经验与升级信息。
+        - 击败 BOSS 返回胜利标志。
+        - 玩家被击败返回死亡信息。
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        "200":
+          description: 战斗回合结算结果
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttackResponse'
+              examples:
+                normal_hit:
+                  summary: 普通命中，敌人反击
+                  value:
+                    player_damage: 10
+                    enemy_hp: 10
+                    enemy_max_hp: 20
+                    enemy_alive: true
+                    counter_attack:
+                      damage: 5
+                      player_hp: 45
+                      player_max_hp: 50
+                    level_up: null
+                    victory: null
+                    player_dead: false
+                    message: "你攻击了 👺 哥布林斥候，造成 10 点伤害。\n哥布林斥候 反击，造成 5 点伤害。你剩余 HP: 45/50"
+                enemy_defeated:
+                  summary: 击败普通敌人并升级
+                  value:
+                    player_damage: 15
+                    enemy_hp: 0
+                    enemy_max_hp: 20
+                    enemy_alive: false
+                    counter_attack: null
+                    level_up:
+                      new_level: 2
+                      xp_gained: 30
+                      hp_bonus: 20
+                      attack_bonus: 5
+                    victory: null
+                    player_dead: false
+                    message: "你攻击了 👺 哥布林斥候，造成 15 点伤害。\n哥布林斥候 已被击败！获得 30 经验值。\n🎉 升级！你现在是 LV.2"
+                boss_victory:
+                  summary: 击败 BOSS，游戏胜利
+                  value:
+                    player_damage: 20
+                    enemy_hp: 0
+                    enemy_max_hp: 100
+                    enemy_alive: false
+                    counter_attack: null
+                    level_up: null
+                    victory:
+                      is_boss: true
+                      message: 🏆 你击败了远古巨龙！成为传奇冒险者！
+                    player_dead: false
+                    message: "你攻击了 🐲 远古巨龙，造成 20 点伤害。\n🏆 你击败了远古巨龙！成为传奇冒险者！"
+                player_dead:
+                  summary: 玩家被击败
+                  value:
+                    player_damage: 10
+                    enemy_hp: 5
+                    enemy_max_hp: 40
+                    enemy_alive: true
+                    counter_attack:
+                      damage: 10
+                      player_hp: 0
+                      player_max_hp: 50
+                    level_up: null
+                    victory: null
+                    player_dead: true
+                    message: "你攻击了 🐗 兽人战士，造成 10 点伤害。\n兽人战士 反击，造成 10 点伤害。\n💀 你死了！输入 respawn 复活。"
+        "400":
+          description: 当前房间无存活敌人
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: no_enemy
+                message: 这里没有可以攻击的敌人。
+        "409":
+          description: 玩家已死亡
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: player_dead
+                message: 你已经死了，无法攻击。输入 respawn 复活。
+
+  /session/{session_id}/stats:
+    get:
+      tags: [combat]
+      summary: 查看玩家状态
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        "200":
+          description: 玩家当前属性
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerStats'
+              example:
+                name: 冒险者
+                hp: 45
+                max_hp: 50
+                attack: 10
+                total_attack: 18
+                level: 1
+                xp: 0
+                xp_to_next_level: 100
+                inventory_count: 1
+
+  # ─────────────────────────────────────────
+  # 检查点与复活
+  # ─────────────────────────────────────────
+  /session/{session_id}/respawn:
+    post:
+      tags: [checkpoint]
+      summary: 死亡后复活
+      description: |
+        玩家死亡后执行复活，回到最近检查点，恢复半血。
+        - 玩家未死亡时返回 400。
+        - 无有效检查点时降级到洞穴入口。
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        "200":
+          description: 复活成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespawnResponse'
+              example:
+                message: 你在检查点复活了（2026-04-08 10:30:00）。HP 恢复至 25/50。
+                player_hp: 25
+                player_max_hp: 50
+                checkpoint_room:
+                  id: hall
+                  name: 📍 阴暗走廊
+                  description: 这是一个狭窄的地下走廊。
+                  exits: { south: entrance, east: goblin_camp }
+                  has_enemy: false
+                  boss_direction: east
+                checkpoint_time: "2026-04-08 10:30:00"
+                respawn_time: "2026-04-08 10:35:00"
+        "400":
+          description: 玩家未死亡，无需复活
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: player_alive
+                message: 你还活着，不需要复活。
+
+  # ─────────────────────────────────────────
+  # 存档与读档
+  # ─────────────────────────────────────────
+  /session/{session_id}/save:
+    post:
+      tags: [save]
+      summary: 保存游戏
+      description: 将当前游戏状态（玩家、房间、检查点）序列化为 JSON 存档。
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filename:
+                  type: string
+                  default: savegame.json
+                  example: savegame.json
+      responses:
+        "200":
+          description: 存档成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SaveResponse'
+              example:
+                message: 💾 游戏已保存至 savegame.json。
+                filename: savegame.json
+                saved_at: "2026-04-08 10:30:00"
+        "500":
+          description: 存档失败
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: save_failed
+                message: 存档失败：磁盘空间不足。
+
+  /session/{session_id}/load:
+    post:
+      tags: [save]
+      summary: 加载游戏
+      description: |
+        从 JSON 存档恢复游戏状态，包括玩家属性、背包、房间状态（敌人 HP、物品列表）和检查点元数据。
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                filename:
+                  type: string
+                  default: savegame.json
+                  example: savegame.json
+      responses:
+        "200":
+          description: 读档成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadResponse'
+              example:
+                message: 💾 游戏已从 savegame.json 加载。欢迎回来，冒险者！
+                player:
+                  name: 冒险者
+                  hp: 45
+                  max_hp: 50
+                  attack: 10
+                  level: 1
+                  xp: 0
+                  inventory:
+                    - name: 铁剑
+                      description: 一把锋利的铁剑
+                      item_type: weapon
+                      effect: 8
+                room:
+                  id: treasure
+                  name: 💎 宝藏室
+                  description: 金光闪闪！
+                  exits: { west: goblin_camp, north: orc_hall }
+                  has_enemy: false
+                  boss_direction: north
+                checkpoint_room_id: treasure
+                checkpoint_time: "2026-04-08 10:30:00"
+        "404":
+          description: 存档文件不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: save_not_found
+                message: 存档文件 savegame.json 不存在。
+        "422":
+          description: 存档结构损坏
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: save_corrupted
+                message: 存档文件结构损坏，无法解析。
+
+# ─────────────────────────────────────────
+# 公共组件
+# ─────────────────────────────────────────
+components:
+
+  parameters:
+    SessionId:
+      name: session_id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: sess-001
+
+  responses:
+    BadRequest:
+      description: 请求参数错误
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+
+    Item:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        item_type:
+          type: string
+          enum: [tool, weapon, potion]
+        effect:
+          type: integer
+
+    RoomInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        exits:
+          type: object
+          additionalProperties:
+            type: string
+        has_enemy:
+          type: boolean
+        boss_direction:
+          type: string
+          nullable: true
+
+    PlayerInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        hp:
+          type: integer
+        max_hp:
+          type: integer
+        attack:
+          type: integer
+        level:
+          type: integer
+        xp:
+          type: integer
+        inventory:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+
+    PlayerStats:
+      type: object
+      properties:
+        name:
+          type: string
+        hp:
+          type: integer
+        max_hp:
+          type: integer
+        attack:
+          type: integer
+        total_attack:
+          type: integer
+        level:
+          type: integer
+        xp:
+          type: integer
+        xp_to_next_level:
+          type: integer
+        inventory_count:
+          type: integer
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+    SessionCreatedResponse:
+      type: object
+      properties:
+        session_id:
+          type: string
+        player:
+          $ref: '#/components/schemas/PlayerInfo'
+        room:
+          $ref: '#/components/schemas/RoomInfo'
+        message:
+          type: string
+
+    SessionStateResponse:
+      type: object
+      properties:
+        player:
+          $ref: '#/components/schemas/PlayerInfo'
+        room:
+          $ref: '#/components/schemas/RoomInfo'
+
+    MoveResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        room:
+          $ref: '#/components/schemas/RoomInfo'
+        enemy_alert:
+          type: string
+          nullable: true
+
+    LookResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+
+    InventoryResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        message:
+          type: string
+
+    TakeResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        item:
+          $ref: '#/components/schemas/Item'
+        player_attack:
+          type: integer
+
+    UseItemResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        player_hp:
+          type: integer
+        player_max_hp:
+          type: integer
+        healed:
+          type: integer
+          nullable: true
+
+    CounterAttack:
+      type: object
+      properties:
+        damage:
+          type: integer
+        player_hp:
+          type: integer
+        player_max_hp:
+          type: integer
+
+    LevelUp:
+      type: object
+      properties:
+        new_level:
+          type: integer
+        xp_gained:
+          type: integer
+        hp_bonus:
+          type: integer
+        attack_bonus:
+          type: integer
+
+    Victory:
+      type: object
+      properties:
+        is_boss:
+          type: boolean
+        message:
+          type: string
+
+    AttackResponse:
+      type: object
+      properties:
+        player_damage:
+          type: integer
+        enemy_hp:
+          type: integer
+        enemy_max_hp:
+          type: integer
+        enemy_alive:
+          type: boolean
+        counter_attack:
+          $ref: '#/components/schemas/CounterAttack'
+          nullable: true
+        level_up:
+          $ref: '#/components/schemas/LevelUp'
+          nullable: true
+        victory:
+          $ref: '#/components/schemas/Victory'
+          nullable: true
+        player_dead:
+          type: boolean
+        message:
+          type: string
+
+    RespawnResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        player_hp:
+          type: integer
+        player_max_hp:
+          type: integer
+        checkpoint_room:
+          $ref: '#/components/schemas/RoomInfo'
+        checkpoint_time:
+          type: string
+        respawn_time:
+          type: string
+
+    SaveResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        filename:
+          type: string
+        saved_at:
+          type: string
+
+    LoadResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        player:
+          $ref: '#/components/schemas/PlayerInfo'
+        room:
+          $ref: '#/components/schemas/RoomInfo'
+        checkpoint_room_id:
+          type: string
+        checkpoint_time:
+          type: string
