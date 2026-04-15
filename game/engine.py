@@ -2,6 +2,7 @@
 from datetime import datetime
 from typing import Dict, Optional
 from .models import Room, Player, Item
+from .services.combat_service import CombatService
 
 
 class GameEngine:
@@ -27,6 +28,7 @@ class GameEngine:
         self.checkpoint_time = ""
         self.last_death_time = ""
         self.last_respawn_time = ""
+        self._combat_service = CombatService()
 
     def _now_str(self) -> str:
         """返回当前时间（用于存档和复活日志）。"""
@@ -218,58 +220,23 @@ class GameEngine:
         return f"你没有 '{item_name}' 或者这个物品不能使用。"
     
     def attack_enemy(self) -> str:
-        """攻击敌人"""
+        """攻击敌人 — 委托 CombatService 执行，返回格式化文本。"""
         if not self.player:
             return "游戏未开始。"
-        
         if not self.player.is_alive:
             return "你已经死了，无法攻击。"
-        
         room = self.get_current_room()
         if not room or not room.enemy or not room.enemy.is_alive():
             return "这里没有敌人。"
-        
-        enemy = room.enemy
-        
-        # 玩家攻击
-        player_dmg = self.player.get_attack_power()
-        enemy.take_damage(player_dmg)
-        result = [f"⚔️  你攻击了 {enemy.name}，造成 {player_dmg} 点伤害！"]
-        
-        if not enemy.is_alive():
-            # 胜利
-            self.player.xp += enemy.reward_xp
-            result.append(f"🎉 你击败了 {enemy.name}！获得 {enemy.reward_xp} 经验值！")
-            
-            # 检查是否升级
-            if self.player.xp >= self.player.level * 50:
-                self.player.level_up()
-                result.append(f"⭐ 升级了！当前等级：LV.{self.player.level}")
-                result.append("   最大生命值 HP +20，且生命值已回满；攻击 +5")
-            
-            # 检查是否是 BOSS
-            if room.is_boss_room:
-                self.game_won = True
-                result.append("")
-                result.append("=" * 40)
-                result.append("🏆 恭喜！你击败了最终 BOSS，游戏胜利！")
-                result.append("=" * 40)
-            
-            room.enemy = None  # 移除敌人
-        else:
-            # 敌人反击
-            enemy_dmg = enemy.attack
-            self.player.take_damage(enemy_dmg)
-            result.append(f"💥 {enemy.name}反击，对你造成 {enemy_dmg} 点伤害！")
-            result.append(f"   你的 HP: {self.player.hp}/{self.player.max_hp}")
-            
-            if not self.player.is_alive:
-                self.last_death_time = self._now_str()
-                result.append("")
-                result.append("💀 你被打败了...")
-                result.append("你将回档到检查点。输入 'respawn' 继续游戏。")
-        
-        return "\n".join(result)
+
+        combat_result = self._combat_service.attack(self.player, room)
+
+        if combat_result.player_dead:
+            self.last_death_time = self._combat_service.last_death_time
+        if combat_result.boss_victory:
+            self.game_won = True
+
+        return "\n".join(combat_result.messages)
     
     def respawn(self) -> str:
         """复活"""
