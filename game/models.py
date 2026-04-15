@@ -1,6 +1,6 @@
 """MUD 游戏数据模型"""
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 
 def _normalize_item_name(name: str) -> str:

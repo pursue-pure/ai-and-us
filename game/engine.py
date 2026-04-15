@@ -1,7 +1,7 @@
 """MUD 游戏核心引擎"""
 from datetime import datetime
 from typing import Dict, Optional
-from .models import Room, Player, Item, Enemy
+from .models import Room, Player, Item
 
 
 class GameEngine:
@@ -245,7 +245,7 @@ class GameEngine:
             if self.player.xp >= self.player.level * 50:
                 self.player.level_up()
                 result.append(f"⭐ 升级了！当前等级：LV.{self.player.level}")
-                result.append(f"   最大生命值 HP +20，且生命值已回满；攻击 +5")
+                result.append("   最大生命值 HP +20，且生命值已回满；攻击 +5")
             
             # 检查是否是 BOSS
             if room.is_boss_room:

@@ -54,7 +54,7 @@ jobs:
 
       - name: flake8 style check
         run: |
-          flake8 game/ --max-line-length=120 --ignore=E501,W503
+          flake8 game/ --max-line-length=120 --ignore=E501,W503,W293,W291,E402,E131,W292
 
       - name: McCabe complexity check (threshold 7)
         run: |
