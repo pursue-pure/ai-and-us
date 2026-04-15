@@ -74,7 +74,6 @@ class CombatService:
         result.messages.append(f"🎉 你击败了 {enemy.name}！获得 {enemy.reward_xp} 经验值！")
 
         if player.xp >= player.level * 50:
-            old_level = player.level
             player.level_up()
             result.level_up = LevelUpResult(
                 new_level=player.level,
