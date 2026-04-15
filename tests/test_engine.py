@@ -138,6 +138,56 @@ class TestGameEngine:
             data = json.load(f)
         assert data["meta"]["checkpoint_room_id"] == "room2"
 
+    def test_load_restores_enemy_dead_state(self, tmp_path):
+        """读档后已击败的敌人应保持死亡状态（hp == 0）"""
+        from game.models import Enemy
+        eng = GameEngine()
+        enemy = Enemy(name="哥布林", description="", hp=20, max_hp=20, attack=5, reward_xp=30)
+        room1 = Room(id="room1", name="房间1", description="", exits={"north": "room2"},
+                     enemy=enemy)
+        room2 = Room(id="room2", name="房间2", description="", exits={"south": "room1"})
+        eng.add_room(room1)
+        eng.add_room(room2)
+        eng.create_player("测试", "room1")
+
+        # 模拟击败敌人
+        eng.rooms["room1"].enemy.hp = 0
+        save_file = tmp_path / "enemy_dead.json"
+        eng.save_game(str(save_file))
+
+        # 重置敌人血量，模拟重新加载
+        eng.rooms["room1"].enemy.hp = 20
+        eng.load_game(str(save_file))
+
+        assert eng.rooms["room1"].enemy.hp == 0
+
+    def test_load_restores_room_items(self, tmp_path):
+        """读档后已拾取的物品不应重新出现"""
+        from game.models import Item
+        eng = GameEngine()
+        room1 = Room(id="room1", name="房间1", description="", exits={"north": "room2"},
+                     items=[Item("铁剑", "一把剑", "weapon", 8),
+                            Item("生命药水", "一瓶药水", "potion", 25)])
+        room2 = Room(id="room2", name="房间2", description="", exits={"south": "room1"})
+        eng.add_room(room1)
+        eng.add_room(room2)
+        eng.create_player("测试", "room1")
+
+        # 模拟拾取铁剑
+        eng.rooms["room1"].has_looked = True
+        eng.take_item("铁剑")
+        save_file = tmp_path / "items.json"
+        eng.save_game(str(save_file))
+
+        # 重置房间物品，模拟重新加载
+        eng.rooms["room1"].items = [Item("铁剑", "一把剑", "weapon", 8),
+                                    Item("生命药水", "一瓶药水", "potion", 25)]
+        eng.load_game(str(save_file))
+
+        item_names = [i.name for i in eng.rooms["room1"].items]
+        assert "铁剑" not in item_names
+        assert "生命药水" in item_names
+
 
 class TestCommandHandler:
     """命令处理器测试"""

@@ -346,10 +346,22 @@ class GameEngine:
                 )
                 self.player.add_item(item)
             
-            # 恢复房间状态
+            # 恢复房间状态（has_looked、敌人 HP、物品列表）
             for room_id, room_data in data.get("rooms", {}).items():
-                if room_id in self.rooms:
-                    self.rooms[room_id].has_looked = room_data.get("has_looked", False)
+                if room_id not in self.rooms:
+                    continue
+                room = self.rooms[room_id]
+                room.has_looked = room_data.get("has_looked", False)
+
+                # 恢复敌人存活状态
+                enemy_alive = room_data.get("enemy_alive", None)
+                if enemy_alive is False and room.enemy is not None:
+                    room.enemy.hp = 0
+
+                # 恢复房间物品列表（只保留存档中仍存在的物品）
+                saved_items = room_data.get("items", None)
+                if saved_items is not None:
+                    room.items = [i for i in room.items if i.name in saved_items]
 
             # 恢复检查点和死亡/复活时间
             meta_data = data.get("meta", {})
