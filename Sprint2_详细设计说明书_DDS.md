@@ -32,10 +32,10 @@
 - 业务控制层：`CombatService`、`InventoryService`、`CheckpointService`
 - 基础设施层：`WorldBuilder`、`JsonSaveRepository`
 
-### 2.1.1 当前落地状态（截至 2026-04-09）
+### 2.1.1 当前落地状态（截至 2026-04-15）
 
-- 已落地：`GameEngine`（部分薄化）、`CombatService`、`CombatResult`、命令解析兼容能力（由 `CommandHandler` 提供）
-- 待落地：`InventoryService`、`CheckpointService`、`JsonSaveRepository`、`WorldBuilder`、`LegacyCommandAdapter`
+- 已落地：`GameEngine`（部分薄化）、`CombatService`、`CombatResult`、`JsonSaveRepository`、`GameSnapshot`、`PlayerSnapshot`、`RoomSnapshot`、`EnemySnapshot`、命令解析兼容能力（由 `CommandHandler` 提供）
+- 待落地：`InventoryService`、`CheckpointService`、`WorldBuilder`、`LegacyCommandAdapter`
 - 说明：本 DDS 的其余章节保留目标态接口定义，作为 Sprint 3 的实现基线。
 
 ### 2.2 核心协作关系

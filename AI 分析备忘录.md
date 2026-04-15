@@ -139,7 +139,8 @@ ai-and-us/
 │   ├── main.py          # 游戏入口 (创建世界)
 │   └── __init__.py      # 模块初始化
 ├── tests/
-│   └── test_engine.py   # 单元测试 (21 个测试用例)
+│   ├── test_engine.py   # 单元测试（回归测试）
+│   └── test_json_save_repository.py   # JSON 存档仓储测试
 ├── requirements.txt
 ├── README.md
 ├── AI 分析备忘录.md

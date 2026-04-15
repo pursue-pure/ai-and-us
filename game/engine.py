@@ -1,8 +1,11 @@
 """MUD 游戏核心引擎"""
 from datetime import datetime
 from typing import Dict, Optional
-from .models import Room, Player, Item
+
+from .infrastructure.json_save_repository import JsonSaveRepository, SaveLoadError
+from .models import Enemy, Item, Player, Room
 from .services.combat_service import CombatService
+from .snapshot import EnemySnapshot, GameSnapshot, ItemSnapshot, PlayerSnapshot, RoomSnapshot
 
 
 class GameEngine:
@@ -29,6 +32,7 @@ class GameEngine:
         self.last_death_time = ""
         self.last_respawn_time = ""
         self._combat_service = CombatService()
+        self._save_repository = JsonSaveRepository()
 
     def _now_str(self) -> str:
         """返回当前时间（用于存档和复活日志）。"""
@@ -237,6 +241,118 @@ class GameEngine:
             self.game_won = True
 
         return "\n".join(combat_result.messages)
+
+    def _build_item_snapshot(self, item: Item) -> ItemSnapshot:
+        return ItemSnapshot(
+            name=item.name,
+            description=item.description,
+            item_type=item.item_type,
+            effect=item.effect,
+        )
+
+    def _build_enemy_snapshot(self, enemy: Enemy) -> EnemySnapshot:
+        return EnemySnapshot(
+            name=enemy.name,
+            description=enemy.description,
+            hp=enemy.hp,
+            max_hp=enemy.max_hp,
+            attack=enemy.attack,
+            reward_xp=enemy.reward_xp,
+        )
+
+    def _build_room_snapshot(self, room: Room) -> RoomSnapshot:
+        return RoomSnapshot(
+            id=room.id,
+            name=room.name,
+            description=room.description,
+            exits=dict(room.exits),
+            items=[self._build_item_snapshot(item) for item in room.items],
+            enemy=self._build_enemy_snapshot(room.enemy) if room.enemy else None,
+            is_boss_room=room.is_boss_room,
+            has_looked=room.has_looked,
+            last_room=room.last_room,
+        )
+
+    def _build_player_snapshot(self) -> PlayerSnapshot:
+        if not self.player:
+            raise ValueError("游戏未开始。")
+
+        return PlayerSnapshot(
+            name=self.player.name,
+            current_room=self.player.current_room,
+            last_room=self.player.last_room,
+            hp=self.player.hp,
+            max_hp=self.player.max_hp,
+            attack=self.player.attack,
+            inventory=[self._build_item_snapshot(item) for item in self.player.inventory],
+            xp=self.player.xp,
+            level=self.player.level,
+            is_alive=self.player.is_alive,
+        )
+
+    def _build_snapshot(self) -> GameSnapshot:
+        if not self.player:
+            raise ValueError("游戏未开始。")
+
+        return GameSnapshot(
+            player=self._build_player_snapshot(),
+            rooms={room_id: self._build_room_snapshot(room) for room_id, room in self.rooms.items()},
+            meta={
+                "checkpoint_room_id": self.checkpoint_room_id,
+                "checkpoint_time": self.checkpoint_time,
+                "last_death_time": self.last_death_time,
+                "last_respawn_time": self.last_respawn_time,
+            },
+        )
+
+    def _restore_room(self, snapshot: RoomSnapshot) -> Room:
+        enemy = None
+        if snapshot.enemy:
+            enemy = Enemy(
+                name=snapshot.enemy.name,
+                description=snapshot.enemy.description,
+                hp=snapshot.enemy.hp,
+                max_hp=snapshot.enemy.max_hp,
+                attack=snapshot.enemy.attack,
+                reward_xp=snapshot.enemy.reward_xp,
+            )
+
+        return Room(
+            id=snapshot.id,
+            name=snapshot.name,
+            description=snapshot.description,
+            exits=dict(snapshot.exits),
+            items=[Item(item.name, item.description, item.item_type, item.effect) for item in snapshot.items],
+            enemy=enemy,
+            is_boss_room=snapshot.is_boss_room,
+            has_looked=snapshot.has_looked,
+            last_room=snapshot.last_room,
+        )
+
+    def _apply_snapshot(self, snapshot: GameSnapshot) -> None:
+        self.rooms = {room_id: self._restore_room(room_snapshot) for room_id, room_snapshot in snapshot.rooms.items()}
+
+        player_snapshot = snapshot.player
+        self.player = Player(
+            name=player_snapshot.name,
+            current_room=player_snapshot.current_room,
+            last_room=player_snapshot.last_room,
+            hp=player_snapshot.hp,
+            max_hp=player_snapshot.max_hp,
+            attack=player_snapshot.attack,
+            inventory=[Item(item.name, item.description, item.item_type, item.effect) for item in player_snapshot.inventory],
+            xp=player_snapshot.xp,
+            level=player_snapshot.level,
+            is_alive=player_snapshot.is_alive,
+        )
+
+        self.checkpoint_room_id = snapshot.meta.get("checkpoint_room_id", "")
+        if self.checkpoint_room_id not in self.rooms:
+            self.checkpoint_room_id = self.player.current_room
+
+        self.checkpoint_time = snapshot.meta.get("checkpoint_time", "") or self._now_str()
+        self.last_death_time = snapshot.meta.get("last_death_time", "")
+        self.last_respawn_time = snapshot.meta.get("last_respawn_time", "")
     
     def respawn(self) -> str:
         """复活"""
@@ -270,116 +386,25 @@ class GameEngine:
     
     def save_game(self, filename: str) -> str:
         """保存游戏"""
-        import json
-        
         if not self.player:
             return "游戏未开始。"
         
         # 每次手动保存都更新检查点位置和时间
         self.update_checkpoint()
 
-        data = {
-            "player": {
-                "name": self.player.name,
-                "current_room": self.player.current_room,
-                "last_room": self.player.last_room,
-                "hp": self.player.hp,
-                "max_hp": self.player.max_hp,
-                "attack": self.player.attack,
-                "xp": self.player.xp,
-                "level": self.player.level,
-                "inventory": [
-                    {"name": item.name, "type": item.item_type, "effect": item.effect}
-                    for item in self.player.inventory
-                ]
-            },
-            "meta": {
-                "checkpoint_room_id": self.checkpoint_room_id,
-                "checkpoint_time": self.checkpoint_time,
-                "last_death_time": self.last_death_time,
-                "last_respawn_time": self.last_respawn_time,
-            },
-            "rooms": {}
-        }
-        
-        # 保存房间状态（敌人是否被击败）
-        for room_id, room in self.rooms.items():
-            data["rooms"][room_id] = {
-                "has_looked": room.has_looked,
-                "enemy_alive": room.enemy.is_alive() if room.enemy else None,
-                "items": [item.name for item in room.items]
-            }
-        
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        
+        try:
+            self._save_repository.save(filename, self._build_snapshot())
+        except (OSError, ValueError, SaveLoadError) as exc:
+            return f"❌ 保存失败：{exc}"
+
         return f"💾 游戏已保存到 {filename}"
     
     def load_game(self, filename: str) -> str:
         """加载游戏"""
-        import json
-        
         try:
-            with open(filename, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-            
-            player_data = data["player"]
-            self.player = Player(
-                name=player_data["name"],
-                current_room=player_data["current_room"],
-                last_room=player_data.get("last_room", ""),
-                hp=player_data["hp"],
-                max_hp=player_data["max_hp"],
-                attack=player_data["attack"],
-                xp=player_data["xp"],
-                level=player_data["level"],
-                inventory=[]
-            )
-            
-            # 恢复物品
-            for item_data in player_data["inventory"]:
-                item = Item(
-                    name=item_data["name"],
-                    description="",
-                    item_type=item_data.get("type", "tool"),
-                    effect=item_data.get("effect", 0)
-                )
-                self.player.add_item(item)
-            
-            # 恢复房间状态（has_looked、敌人 HP、物品列表）
-            for room_id, room_data in data.get("rooms", {}).items():
-                if room_id not in self.rooms:
-                    continue
-                room = self.rooms[room_id]
-                room.has_looked = room_data.get("has_looked", False)
+            snapshot = self._save_repository.load(filename)
+            self._apply_snapshot(snapshot)
 
-                # 恢复敌人存活状态
-                enemy_alive = room_data.get("enemy_alive", None)
-                if enemy_alive is False and room.enemy is not None:
-                    room.enemy.hp = 0
-
-                # 恢复房间物品列表（只保留存档中仍存在的物品）
-                saved_items = room_data.get("items", None)
-                if saved_items is not None:
-                    room.items = [i for i in room.items if i.name in saved_items]
-
-            # 恢复检查点和死亡/复活时间
-            meta_data = data.get("meta", {})
-            loaded_checkpoint_room = meta_data.get("checkpoint_room_id", "")
-            if loaded_checkpoint_room in self.rooms:
-                self.checkpoint_room_id = loaded_checkpoint_room
-            else:
-                self.checkpoint_room_id = self.player.current_room
-
-            self.checkpoint_time = meta_data.get("checkpoint_time", "")
-            if not self.checkpoint_time:
-                self.checkpoint_time = self._now_str()
-
-            self.last_death_time = meta_data.get("last_death_time", "")
-            self.last_respawn_time = meta_data.get("last_respawn_time", "")
-            
             return f"💾 游戏已从 {filename} 加载。欢迎回来，{self.player.name}！"
-        except FileNotFoundError:
-            return f"❌ 存档文件 {filename} 不存在。"
-        except Exception as e:
-            return f"❌ 加载失败：{e}"
+        except SaveLoadError as exc:
+            return f"❌ 加载失败：{exc}"
