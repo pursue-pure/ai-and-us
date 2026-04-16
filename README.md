@@ -107,6 +107,8 @@ pip install pytest
 pytest tests/ -v
 ```
 
+当前测试集合包含引擎回归测试与 JSON 存档仓储测试，共 32 个测试用例。
+
 ## 📁 项目结构
 
 ```
@@ -118,7 +120,8 @@ ai-and-us/
 │   ├── models.py        # 数据模型
 │   └── commands.py      # 命令处理
 ├── tests/
-│   └── test_engine.py   # 单元测试（21 个测试用例）
+│   ├── test_engine.py   # 单元测试（回归测试）
+│   └── test_json_save_repository.py   # JSON 存档仓储测试
 ├── .gitignore
 ├── requirements.txt
 ├── README.md
