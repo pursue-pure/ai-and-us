@@ -3,13 +3,13 @@ sys.stdout.reconfigure(encoding="utf-8")
 """
 Mock 展现层测试 — 页面 2：存读档流程
 覆盖：搜索房间 → 拾取物品 → 未 look 拾取（边界）→ 使用药水 → 存档 → 读档验证 → 读不存在存档（边界）
-运行前提：prism mock openapi.yaml --port 4010
+运行前提：prism mock openapi.yaml --port 4011
 """
 import json
 import urllib.request
 import urllib.error
 
-BASE = "http://127.0.0.1:4010"
+BASE = "http://127.0.0.1:4011"
 SESSION = "sess-001"
 PASS = []
 FAIL = []

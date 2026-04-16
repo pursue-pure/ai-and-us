@@ -3,13 +3,13 @@ sys.stdout.reconfigure(encoding="utf-8")
 """
 Mock 展现层测试 — 页面 1：战斗流程
 覆盖：创建会话 → 移动 → 攻击（普通命中）→ 契约结构验证 → 无效方向移动（边界）→ 死亡复活
-运行前提：prism mock openapi.yaml --port 4010
+运行前提：prism mock openapi.yaml --port 4011
 """
 import json
 import urllib.request
 import urllib.error
 
-BASE = "http://127.0.0.1:4010"
+BASE = "http://127.0.0.1:4011"
 SESSION = "sess-001"
 PASS = []
 FAIL = []
