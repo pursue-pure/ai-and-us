@@ -10,7 +10,7 @@ from .snapshot import EnemySnapshot, GameSnapshot, ItemSnapshot, PlayerSnapshot,
 
 class GameEngine:
     """游戏引擎 - 管理游戏状态和逻辑"""
-    
+
     # BOSS 方向映射（每个房间指向 BOSS 房间的方向）
     BOSS_PATH = {
         "entrance": "north",
@@ -20,7 +20,7 @@ class GameEngine:
         "orc_hall": "north",
         "armory": "north",
     }
-    
+
     def __init__(self):
         self.rooms: Dict[str, Room] = {}
         self.player: Optional[Player] = None
@@ -59,11 +59,11 @@ class GameEngine:
         elif self.player and self.player.current_room in self.rooms:
             self.checkpoint_room_id = self.player.current_room
         self.checkpoint_time = self._now_str()
-    
+
     def add_room(self, room: Room) -> None:
         """添加房间到游戏世界"""
         self.rooms[room.id] = room
-    
+
     def create_player(self, name: str, start_room: str) -> Player:
         """创建玩家"""
         if start_room not in self.rooms:
@@ -71,114 +71,114 @@ class GameEngine:
         self.player = Player(name=name, current_room=start_room)
         self.update_checkpoint(start_room)
         return self.player
-    
+
     def get_current_room(self) -> Optional[Room]:
         """获取玩家当前房间"""
         if not self.player:
             return None
         return self.rooms.get(self.player.current_room)
-    
+
     def get_boss_direction(self) -> str:
         """获取前往 BOSS 的方向"""
         if not self.player:
             return ""
         return self.BOSS_PATH.get(self.player.current_room, "")
-    
+
     def move_player(self, direction: str) -> str:
         """移动玩家"""
         if not self.player:
             return "游戏未开始。"
-        
+
         if not self.player.is_alive:
             return "你已经死了，无法移动。输入 'respawn' 复活。"
-        
+
         room = self.get_current_room()
         if not room:
             return "你在虚空中..."
-        
+
         if direction not in room.exits:
             boss_dir = self.get_boss_direction()
             hint = f"【提示】前往 BOSS 的方向是：{boss_dir}" if boss_dir else ""
             return f"不能往 {direction} 走。{room.get_exit_description(boss_dir)}\n{hint}"
-        
+
         next_room_id = room.exits[direction]
         # 更新上一个房间
         self.player.last_room = self.player.current_room
         self.player.current_room = next_room_id
-        
+
         new_room = self.rooms[next_room_id]
         result = [f"你前往{direction}...", "", self.describe_room()]
-        
+
         # 检查是否有敌人
         if new_room.enemy and new_room.enemy.is_alive():
             result.append("")
             result.append(f"⚠️  {new_room.enemy.name}出现了！{new_room.enemy.description}")
             result.append(f"敌人 HP: {new_room.enemy.hp}/{new_room.enemy.max_hp} | 攻击力：{new_room.enemy.attack}")
             result.append("输入 'attack' 进行攻击！")
-        
+
         return "\n".join(result)
-    
+
     def describe_room(self) -> str:
         """描述当前房间（不显示物品，需要 look 才能发现）"""
         room = self.get_current_room()
         if not room:
             return "你在虚空中..."
-        
+
         desc = [f"=== {room.name} ===", room.description]
-        
+
         # 显示敌人（如果有）
         if room.enemy and room.enemy.is_alive():
             desc.append(f"⚠️  这里有敌人：{room.enemy.name}！")
-        
+
         # 显示出口和 BOSS 提示
         boss_dir = self.get_boss_direction()
         desc.append(room.get_exit_description(boss_dir))
-        
+
         if boss_dir:
             desc.append(f"💡 【提示】前往最终 BOSS 的方向是：{boss_dir}")
-        
+
         return "\n".join(desc)
-    
+
     def look(self) -> str:
         """搜索房间（发现物品）"""
         if not self.player:
             return "游戏未开始。"
-        
+
         room = self.get_current_room()
         if not room:
             return "你在虚空中..."
-        
+
         room.has_looked = True
         result = [f"你仔细搜索了 {room.name}..."]
-        
+
         if room.items:
             item_names = ", ".join(item.name for item in room.items)
             result.append(f"🎁 你发现了：{item_names}")
         else:
             result.append("💭 这里没有什么值得拿的东西。")
-        
+
         # 检查敌人
         if room.enemy and room.enemy.is_alive():
             result.append(f"⚠️  {room.enemy.name}正盯着你！")
-        
+
         return "\n".join(result)
-    
+
     def take_item(self, item_name: str) -> str:
         """拾取物品"""
         if not self.player:
             return "游戏未开始。"
-        
+
         if not self.player.is_alive:
             return "你已经死了，无法拾取物品。"
-        
+
         room = self.get_current_room()
         if not room:
             return "你在虚空中..."
-        
+
         # 必须先 look 才能看到物品
         if not room.has_looked:
             return "这里看起来什么都没有。先输入 'look' 搜索一下！"
-        
+
         item = room.remove_item(item_name)
         if item:
             self.player.add_item(item)
@@ -190,15 +190,15 @@ class GameEngine:
                 return f"🎉 你拿起了 {item.name}。"
         else:
             return f"这里没有 '{item_name}'。"
-    
+
     def show_inventory(self) -> str:
         """显示背包"""
         if not self.player:
             return "游戏未开始。"
-        
+
         if not self.player.inventory:
             return "🎒 背包是空的。"
-        
+
         items = []
         for item in self.player.inventory:
             if item.item_type == "weapon":
@@ -207,22 +207,22 @@ class GameEngine:
                 items.append(f"{item.name} (药水，恢复 {item.effect} HP)")
             else:
                 items.append(f"{item.name} ({item.description})")
-        
+
         return "🎒 背包：" + ", ".join(items)
-    
+
     def use_item(self, item_name: str) -> str:
         """使用物品"""
         if not self.player:
             return "游戏未开始。"
-        
+
         if not self.player.is_alive:
             return "你已经死了。"
-        
+
         result = self.player.use_item(item_name)
         if result:
             return result
         return f"你没有 '{item_name}' 或者这个物品不能使用。"
-    
+
     def attack_enemy(self) -> str:
         """攻击敌人 — 委托 CombatService 执行，返回格式化文本。"""
         if not self.player:
@@ -353,15 +353,15 @@ class GameEngine:
         self.checkpoint_time = snapshot.meta.get("checkpoint_time", "") or self._now_str()
         self.last_death_time = snapshot.meta.get("last_death_time", "")
         self.last_respawn_time = snapshot.meta.get("last_respawn_time", "")
-    
+
     def respawn(self) -> str:
         """复活"""
         if not self.player:
             return "游戏未开始。"
-        
+
         if self.player.is_alive:
             return "你还活着，不需要复活。"
-        
+
         checkpoint_room_id = self._resolve_checkpoint_room()
         if not checkpoint_room_id:
             return "❌ 复活失败：当前没有可用检查点。"
@@ -377,18 +377,18 @@ class GameEngine:
             f"✨ 你复活了！回到检查点：{room.name}（记录时间：{checkpoint_time}）\n"
             f"HP 恢复到 {self.player.hp}/{self.player.max_hp}"
         )
-    
+
     def show_stats(self) -> str:
         """显示玩家状态"""
         if not self.player:
             return "游戏未开始。"
         return "📊 " + self.player.get_stats()
-    
+
     def save_game(self, filename: str) -> str:
         """保存游戏"""
         if not self.player:
             return "游戏未开始。"
-        
+
         # 每次手动保存都更新检查点位置和时间
         self.update_checkpoint()
 
@@ -398,7 +398,7 @@ class GameEngine:
             return f"❌ 保存失败：{exc}"
 
         return f"💾 游戏已保存到 {filename}"
-    
+
     def load_game(self, filename: str) -> str:
         """加载游戏"""
         try:

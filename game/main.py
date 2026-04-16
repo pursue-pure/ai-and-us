@@ -13,7 +13,7 @@ from game.models import Room, Item, Enemy
 def create_demo_world() -> GameEngine:
     """创建演示世界 - 洞穴探险打怪游戏"""
     engine = GameEngine()
-    
+
     # ========== 创建房间 ==========
     # 1. 洞穴入口（起点，安全区）
     entrance = Room(
@@ -25,7 +25,7 @@ def create_demo_world() -> GameEngine:
         items=[Item("火把", "一个普通的木制火把", "tool", 0)],
         last_room=""
     )
-    
+
     # 2. 阴暗走廊（安全区，有物品）
     hall = Room(
         id="hall",
@@ -36,7 +36,7 @@ def create_demo_world() -> GameEngine:
         items=[Item("生命药水", "一瓶红色的药水", "potion", 25)],
         last_room="entrance"
     )
-    
+
     # 3. 哥布林营地（小怪 1）
     goblin_camp = Room(
         id="goblin_camp",
@@ -55,7 +55,7 @@ def create_demo_world() -> GameEngine:
         items=[Item("哥布林匕首", "一把生锈的匕首", "weapon", 3)],
         last_room="hall"
     )
-    
+
     # 4. 宝藏室（安全区，有好物品）
     treasure = Room(
         id="treasure",
@@ -69,7 +69,7 @@ def create_demo_world() -> GameEngine:
         ],
         last_room="goblin_camp"
     )
-    
+
     # 5. 兽人大厅（小怪 2）
     orc_hall = Room(
         id="orc_hall",
@@ -88,7 +88,7 @@ def create_demo_world() -> GameEngine:
         items=[Item("兽人战斧", "一把沉重的战斧", "weapon", 12)],
         last_room="treasure"
     )
-    
+
     # 6. 武器库（安全区，有神器）
     armory = Room(
         id="armory",
@@ -102,7 +102,7 @@ def create_demo_world() -> GameEngine:
         ],
         last_room="orc_hall"
     )
-    
+
     # 7. BOSS 巢穴（最终决战）
     boss_lair = Room(
         id="boss_lair",
@@ -122,14 +122,14 @@ def create_demo_world() -> GameEngine:
         is_boss_room=True,
         last_room="armory"
     )
-    
+
     # ========== 添加房间到引擎 ==========
     for room in [entrance, hall, goblin_camp, treasure, orc_hall, armory, boss_lair]:
         engine.add_room(room)
-    
+
     # ========== 创建玩家 ==========
     engine.create_player("冒险者", "entrance")
-    
+
     return engine
 
 
@@ -149,15 +149,15 @@ def main():
     print("   - 打怪前确保 HP 充足，可以用药水恢复")
     print("   - 死亡后输入 'respawn' 复活")
     print("=" * 60)
-    
+
     engine = create_demo_world()
     handler = CommandHandler(engine)
     engine.running = True
-    
+
     print()
     print(engine.describe_room())
     print()
-    
+
     while engine.running:
         try:
             # 检查游戏胜利
@@ -165,20 +165,20 @@ def main():
                 print("\n🎮 游戏结束！你成功击败了巨龙，成为了传奇冒险者！")
                 print("   输入 'quit' 退出游戏，或继续探索。")
                 engine.game_won = False  # 重置，允许继续玩
-            
+
             # 检查游戏失败（可选：可以添加死亡次数限制）
-            
+
             user_input = input("> ").strip()
             if not user_input:
                 continue
-            
+
             result = handler.handle(user_input)
             print(result)
-            
+
             # 检查是否退出
             if not engine.running:
                 break
-            
+
         except KeyboardInterrupt:
             print("\n👋 游戏已中断。再见！")
             break

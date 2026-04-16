@@ -6,7 +6,7 @@ from .engine import GameEngine
 
 class CommandHandler:
     """命令处理器 - 解析并执行玩家输入"""
-    
+
     def __init__(self, engine: GameEngine):
         self.engine = engine
         self.commands = {
@@ -48,7 +48,7 @@ class CommandHandler:
             "quit": self.cmd_quit,
             "exit": self.cmd_quit,
         }
-    
+
     def handle(self, user_input: str) -> str:
         """处理用户输入"""
         command, args = self._parse_input(user_input)
@@ -90,7 +90,7 @@ class CommandHandler:
                 break
 
         return cmd, args
-    
+
     def cmd_go(self, args: list) -> str:
         if not args:
             return "往哪走？用法：go <方向> 或 n/s/e/w"
@@ -98,56 +98,56 @@ class CommandHandler:
         if direction == "to" and len(args) > 1:
             direction = args[1]
         return self.engine.move_player(direction)
-    
+
     def cmd_north(self, args: list) -> str:
         return self.engine.move_player("north")
-    
+
     def cmd_south(self, args: list) -> str:
         return self.engine.move_player("south")
-    
+
     def cmd_east(self, args: list) -> str:
         return self.engine.move_player("east")
-    
+
     def cmd_west(self, args: list) -> str:
         return self.engine.move_player("west")
-    
+
     def cmd_look(self, args: list) -> str:
         return self.engine.look()
-    
+
     def cmd_take(self, args: list) -> str:
         if not args:
             return "拿什么？用法：take <物品名>"
         item_name = " ".join(args).strip()
         item_name = item_name.strip("<>").strip()
         return self.engine.take_item(item_name)
-    
+
     def cmd_inventory(self, args: list) -> str:
         return self.engine.show_inventory()
-    
+
     def cmd_use(self, args: list) -> str:
         if not args:
             return "使用什么？用法：use <物品名>"
         item_name = " ".join(args).strip()
         item_name = item_name.strip("<>").strip()
         return self.engine.use_item(item_name)
-    
+
     def cmd_attack(self, args: list) -> str:
         return self.engine.attack_enemy()
-    
+
     def cmd_stats(self, args: list) -> str:
         return self.engine.show_stats()
-    
+
     def cmd_save(self, args: list) -> str:
         filename = args[0] if args else "savegame.json"
         return self.engine.save_game(filename)
-    
+
     def cmd_load(self, args: list) -> str:
         filename = args[0] if args else "savegame.json"
         return self.engine.load_game(filename)
-    
+
     def cmd_respawn(self, args: list) -> str:
         return self.engine.respawn()
-    
+
     def cmd_help(self, args: list) -> str:
         return """
 ╔═══════════════════════════════════════════════════════════╗
@@ -177,7 +177,7 @@ class CommandHandler:
 ║    quit (exit)            退出游戏                         ║
 ╚═══════════════════════════════════════════════════════════╝
 """
-    
+
     def cmd_quit(self, args: list) -> str:
         self.engine.running = False
         return "👋 感谢游玩，再见！"
