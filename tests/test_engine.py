@@ -120,6 +120,17 @@ class TestGameEngine:
         assert "回到检查点" in result
         assert checkpoint_time in result
 
+    def test_respawn_fails_without_available_checkpoint(self, engine):
+        engine.player.hp = 0
+        engine.player.is_alive = False
+        engine.rooms = {}
+        engine.checkpoint_room_id = ""
+
+        result = engine.respawn()
+
+        assert "复活失败" in result
+        assert "没有可用检查点" in result
+
     def test_load_restore_checkpoint_meta(self, engine, tmp_path):
         engine.move_player("north")
         save_file = tmp_path / "checkpoint_meta.json"
