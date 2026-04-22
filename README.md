@@ -1,153 +1,159 @@
-# 🗡️ MUD 洞穴探险游戏
+# MUD 洞穴探险游戏
 
-一个基于控制台的文字冒险游戏，玩家进入洞穴探险，沿途收集物品、击败怪物，最终挑战远古巨龙。
+一个基于控制台的文字冒险游戏。玩家在洞穴中探索、拾取物品、进行回合制战斗，最终挑战远古巨龙。
 
-## 🎮 快速开始
+## 快速开始
 
 ```bash
-# 安装依赖
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-
-# 运行游戏
 python game/main.py
 ```
 
-## 📖 游戏故事
+## 本地开发环境搭建
 
-你是一名勇敢的冒险者，听说这个洞穴深处有一条**远古巨龙**，它守护着无数的财宝。你决定进入洞穴，击败巨龙，成为传奇！
+### 1. 推荐环境
 
-## 🎯 游戏目标
+- Python 3.10+（CI 当前覆盖 3.10 / 3.11 / 3.12）
+- Linux / macOS / Windows（WSL）
 
-1. 探索洞穴的 7 个房间
-2. 收集武器和药水提升实力
-3. 击败沿途的怪物（哥布林、兽人）
-4. 最终击败**远古巨龙**BOSS
-
-## 🗺️ 地图流程
-
-```
-🕳️ 洞穴入口 → 📍 阴暗走廊 → 💀 哥布林营地 → 💎 宝藏室 → 👹 兽人大厅 → ⚔️ 武器库 → 🐉 BOSS 巢穴
-   安全          安全 + 物品      小怪 1        安全 + 宝物     小怪 2        安全 + 神器    最终 BOSS
-                (生命药水)      (HP:20)      (大药水 + 铁剑)  (HP:40)      (超级药水 + 圣剑) (HP:100)
-```
-
-## 🎮 游戏命令
-
-### 移动
-| 命令 | 说明 |
-|------|------|
-| `go north` 或 `n` | 向北走 |
-| `go south` 或 `s` | 向南走 |
-| `go east` 或 `e` | 向东走 |
-| `go west` 或 `w` | 向西走 |
-
-### 查看
-| 命令 | 说明 |
-|------|------|
-| `look` 或 `l` | 搜索房间，发现物品 |
-| `stats` 或 `hp` | 查看角色状态 |
-
-### 物品
-| 命令 | 说明 |
-|------|------|
-| `take <物品>` | 拾取物品（支持 `take<物品>`、`take物品`） |
-| `inventory` 或 `i` | 查看背包 |
-| `use <药水>` | 使用药水恢复 HP（支持 `use<药水>`、`use药水`） |
-
-### 战斗
-| 命令 | 说明 |
-|------|------|
-| `attack` | 攻击当前房间的敌人 |
-| `respawn` | 死亡后复活 |
-
-### 系统
-| 命令 | 说明 |
-|------|------|
-| `save [文件名]` | 保存游戏 |
-| `load [文件名]` | 加载游戏 |
-| `help` | 显示帮助 |
-| `quit` | 退出游戏 |
-
-## 📊 游戏系统
-
-### 玩家属性
-- **HP**: 生命值，归零时死亡
-- **攻击**: 决定伤害输出
-- **等级**: 击败怪物获得经验升级
-
-### 初始属性
-| 属性 | 数值 |
-|------|------|
-| HP | 50 |
-| 攻击 | 10 |
-| 等级 | 1 |
-
-### 升级奖励
-击败怪物获得经验，升级时：
-- **最大生命值 HP +20，且生命值回满**
-- **攻击 +5**
-
-### 物品类型
-| 类型 | 效果 | 示例 |
-|------|------|------|
-| 🗡️ 武器 | 增加攻击力 | 铁剑 (+8), 圣剑 (+20) |
-| 🧪 药水 | 恢复 HP | 生命药水 (+25), 超级药水 (+100) |
-
-### 敌人
-| 敌人 | HP | 攻击 | 经验 |
-|------|-----|------|------|
-| 👺 哥布林斥候 | 20 | 5 | 30 |
-| 🐗 兽人战士 | 40 | 10 | 60 |
-| 🐲 远古巨龙 (BOSS) | 100 | 15 | 500 |
-
-## 🧪 运行测试
+### 2. 克隆与进入目录
 
 ```bash
-pip install pytest
-pytest tests/ -v
+git clone <your-repo-url>
+cd ai-and-us
 ```
 
-当前测试集合包含引擎回归测试与 JSON 存档仓储测试，共 32 个测试用例。
+### 3. 创建虚拟环境并安装依赖
 
-## 📁 项目结构
+Linux / macOS:
 
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
+
+Windows PowerShell:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 4. 运行游戏
+
+```bash
+python game/main.py
+```
+
+### 5. 运行测试
+
+```bash
+pytest tests/ -v --tb=short
+```
+
+说明：`pytest.ini` 已配置 `pythonpath = .` 与 `testpaths = tests`，可直接在仓库根目录执行。
+
+## 系统架构图（模块关系）
+
+```mermaid
+flowchart LR
+   U[玩家输入] --> C[CommandHandler]
+   C --> E[GameEngine]
+   E --> M[models]
+   E --> S[CombatService]
+   E --> R[JsonSaveRepository]
+   E --> P[snapshot]
+   R --> P
+   T[pytest tests] --> C
+   T --> E
+   T --> S
+   T --> R
+```
+
+## 核心业务模块职责
+
+| 模块 | 主要职责 | 关键文件 |
+|------|----------|----------|
+| 命令适配层 | 解析输入命令，分派到引擎接口 | `game/commands.py` |
+| 引擎编排层 | 管理房间、玩家、检查点、存读档、战斗入口 | `game/engine.py` |
+| 领域模型层 | 定义 Player/Room/Enemy/Item 等核心实体与规则 | `game/models.py` |
+| 战斗服务层 | 负责攻击、反击、升级、BOSS 胜利结算 | `game/services/combat_service.py` |
+| 持久化层 | 将快照保存为 JSON 并读取恢复 | `game/infrastructure/json_save_repository.py` |
+| 快照层 | 运行时对象与序列化结构之间的转换 | `game/snapshot.py` |
+| 启动组装层 | 创建默认世界并启动命令循环 | `game/main.py` |
+
+## 游戏目标
+
+1. 探索洞穴的 7 个房间。
+2. 收集武器和药水提升实力。
+3. 击败沿途怪物并积累经验升级。
+4. 最终击败远古巨龙。
+
+## 地图流程
+
+```text
+洞穴入口 -> 阴暗走廊 -> 哥布林营地 -> 宝藏室 -> 兽人大厅 -> 武器库 -> BOSS 巢穴
+```
+
+## 常用命令
+
+| 分类 | 命令 | 说明 |
+|------|------|------|
+| 移动 | `go north` / `n` | 向北移动 |
+| 移动 | `go south` / `s` | 向南移动 |
+| 移动 | `go east` / `e` | 向东移动 |
+| 移动 | `go west` / `w` | 向西移动 |
+| 探索 | `look` / `l` | 搜索房间，发现物品 |
+| 状态 | `stats` / `hp` | 查看角色状态 |
+| 物品 | `take <物品>` | 拾取物品（支持紧凑输入） |
+| 物品 | `inventory` / `i` | 查看背包 |
+| 物品 | `use <药水>` | 使用药水恢复生命 |
+| 战斗 | `attack` | 攻击当前房间敌人 |
+| 生存 | `respawn` | 死亡后在检查点复活 |
+| 存档 | `save [文件名]` | 保存游戏 |
+| 读档 | `load [文件名]` | 加载游戏 |
+| 系统 | `help` | 查看帮助 |
+| 系统 | `quit` | 退出游戏 |
+
+## 测试与 CI
+
+- 单元测试目录：`tests/`
+- 本地执行：`pytest tests/ -v --tb=short`
+- CI 文件：`.github/workflows/ci.yml`
+
+CI 在以下场景自动执行测试：
+
+- push 到 `main`、`develop`
+- pull request 到 `main`、`develop`
+
+并在 Python 3.10 / 3.11 / 3.12 三个版本矩阵下运行。
+
+## 项目结构
+
+```text
 ai-and-us/
 ├── game/
-│   ├── __init__.py      # 模块初始化
-│   ├── main.py          # 游戏入口
-│   ├── engine.py        # 游戏引擎核心
-│   ├── models.py        # 数据模型
-│   └── commands.py      # 命令处理
+│   ├── main.py
+│   ├── commands.py
+│   ├── engine.py
+│   ├── models.py
+│   ├── snapshot.py
+│   ├── services/
+│   │   └── combat_service.py
+│   └── infrastructure/
+│       └── json_save_repository.py
 ├── tests/
-│   ├── test_engine.py   # 单元测试（回归测试）
-│   └── test_json_save_repository.py   # JSON 存档仓储测试
-├── .gitignore
+│   ├── test_engine.py
+│   ├── test_combat_service.py
+│   └── test_json_save_repository.py
+├── .github/workflows/ci.yml
+├── pytest.ini
 ├── requirements.txt
-├── README.md
-├── AI 分析备忘录.md
-└── 用户故事池.md
+└── README.md
 ```
-
-## 💡 游戏技巧
-
-1. **进入新房间后先用 `look` 搜索** - 物品不会自动显示
-2. **注意 HP** - 打怪前确保血量充足
-3. **善用药水** - 战斗中可以用 `use 生命药水` 恢复
-4. **记住 BOSS 方向** - 系统会提示前往 BOSS 的路
-5. **死亡不要怕** - 输入 `respawn` 可在检查点复活（恢复半血）
-
-## 📝 开发原则
-
-- ✅ 纯控制台交互，无 GUI
-- ✅ 无网络功能
-- ✅ 简单命令解析（关键词匹配）
-- ✅ 回合制战斗系统
-
-## 🏆 通关条件
-
-击败 **🐲 远古巨龙** 即可获胜！
-
----
-
-**祝你游戏愉快！** 🎮
