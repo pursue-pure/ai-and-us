@@ -84,6 +84,7 @@ flowchart LR
 | 引擎编排层 | 管理房间、玩家、检查点、存读档、战斗入口 | `game/engine.py` |
 | 领域模型层 | 定义 Player/Room/Enemy/Item 等核心实体与规则 | `game/models.py` |
 | 战斗服务层 | 负责攻击、反击、升级、BOSS 胜利结算 | `game/services/combat_service.py` |
+| 检查点服务层 | 负责检查点更新、死亡记录与复活流程 | `game/services/checkpoint_service.py` |
 | 持久化层 | 将快照保存为 JSON 并读取恢复 | `game/infrastructure/json_save_repository.py` |
 | 快照层 | 运行时对象与序列化结构之间的转换 | `game/snapshot.py` |
 | 启动组装层 | 创建默认世界并启动命令循环 | `game/main.py` |
@@ -145,10 +146,12 @@ ai-and-us/
 │   ├── models.py
 │   ├── snapshot.py
 │   ├── services/
-│   │   └── combat_service.py
+│   │   ├── combat_service.py
+│   │   └── checkpoint_service.py
 │   └── infrastructure/
 │       └── json_save_repository.py
 ├── tests/
+│   ├── test_checkpoint_service.py
 │   ├── test_engine.py
 │   ├── test_combat_service.py
 │   └── test_json_save_repository.py
