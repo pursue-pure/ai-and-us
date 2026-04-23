@@ -6,16 +6,46 @@
 
 你是一名勇敢的冒险者，听说这个洞穴深处有一条远古巨龙，它守护着无数的财宝。你决定进入洞穴，击败巨龙，成为传奇。
 
-## 快速开始
+## 本地开发环境搭建
 
-```bash
-python -m venv .venv
-source .venv/bin/activate
+### 1. 准备工作
+- **Python 版本**: 推荐使用 Python 3.10 或更高版本。
+- **虚拟环境 (推荐)**: 建议在项目根目录下创建并激活虚拟环境，以隔离依赖。
+  ```powershell
+  # Windows
+  python -m venv .venv
+  .\.venv\Scripts\activate
+  ```
+
+### 2. 安装依赖
+```powershell
 pip install -r requirements.txt
+```
+
+### 3. 运行游戏
+```powershell
 python game/main.py
 ```
 
-## 本地开发环境搭建
+### 4. 运行单元测试
+项目使用 `pytest` 进行回归保护，运行以下命令执行全量测试：
+```powershell
+python -m pytest
+```
+
+## 系统架构图（模块关系）
+
+```mermaid
+flowchart LR
+   U[玩家输入] --> C[CommandHandler]
+   C --> E[GameEngine]
+   E --> M[models]
+   E --> S1[CombatService]
+   E --> S2[CheckpointService]
+   E --> R[JsonSaveRepository]
+   E --> P[snapshot]
+   R --> P
+```
 
 ### 1. 推荐环境
 
@@ -158,7 +188,8 @@ ai-and-us/
 │   ├── test_checkpoint_service.py
 │   ├── test_engine.py
 │   ├── test_combat_service.py
-│   └── test_json_save_repository.py
+│   ├── test_json_save_repository.py
+│   └── test_snapshot.py
 ├── .github/workflows/ci.yml
 ├── pytest.ini
 ├── requirements.txt
