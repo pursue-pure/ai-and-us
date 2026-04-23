@@ -1,9 +1,9 @@
 """MUD 游戏核心引擎"""
-from datetime import datetime
 from typing import Dict, Optional
 
 from .infrastructure.json_save_repository import JsonSaveRepository, SaveLoadError
 from .models import Enemy, Item, Player, Room
+from .services.checkpoint_service import CheckpointService
 from .services.combat_service import CombatService
 from .snapshot import EnemySnapshot, GameSnapshot, ItemSnapshot, PlayerSnapshot, RoomSnapshot
 
@@ -27,38 +27,45 @@ class GameEngine:
         self.running = False
         self.game_won = False
         self.game_over = False
-        self.checkpoint_room_id = ""
-        self.checkpoint_time = ""
-        self.last_death_time = ""
-        self.last_respawn_time = ""
+        self._checkpoint_service = CheckpointService()
         self._combat_service = CombatService()
         self._save_repository = JsonSaveRepository()
 
-    def _now_str(self) -> str:
-        """返回当前时间（用于存档和复活日志）。"""
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    @property
+    def checkpoint_room_id(self) -> str:
+        return self._checkpoint_service.checkpoint_room_id
 
-    def _resolve_checkpoint_room(self) -> str:
-        """解析可用检查点房间。"""
-        if self.checkpoint_room_id in self.rooms:
-            return self.checkpoint_room_id
-        if "entrance" in self.rooms:
-            return "entrance"
-        if self.player and self.player.last_room in self.rooms:
-            return self.player.last_room
-        if self.player and self.player.current_room in self.rooms:
-            return self.player.current_room
-        if self.rooms:
-            return next(iter(self.rooms))
-        return ""
+    @checkpoint_room_id.setter
+    def checkpoint_room_id(self, value: str) -> None:
+        self._checkpoint_service.checkpoint_room_id = value
+
+    @property
+    def checkpoint_time(self) -> str:
+        return self._checkpoint_service.checkpoint_time
+
+    @checkpoint_time.setter
+    def checkpoint_time(self, value: str) -> None:
+        self._checkpoint_service.checkpoint_time = value
+
+    @property
+    def last_death_time(self) -> str:
+        return self._checkpoint_service.last_death_time
+
+    @last_death_time.setter
+    def last_death_time(self, value: str) -> None:
+        self._checkpoint_service.last_death_time = value
+
+    @property
+    def last_respawn_time(self) -> str:
+        return self._checkpoint_service.last_respawn_time
+
+    @last_respawn_time.setter
+    def last_respawn_time(self, value: str) -> None:
+        self._checkpoint_service.last_respawn_time = value
 
     def update_checkpoint(self, room_id: Optional[str] = None) -> None:
         """更新检查点（固定地点 + 固定时间）。"""
-        if room_id and room_id in self.rooms:
-            self.checkpoint_room_id = room_id
-        elif self.player and self.player.current_room in self.rooms:
-            self.checkpoint_room_id = self.player.current_room
-        self.checkpoint_time = self._now_str()
+        self._checkpoint_service.update_checkpoint(self.player, self.rooms, room_id)
 
     def add_room(self, room: Room) -> None:
         """添加房间到游戏世界"""
@@ -236,7 +243,7 @@ class GameEngine:
         combat_result = self._combat_service.attack(self.player, room)
 
         if combat_result.player_dead:
-            self.last_death_time = self._combat_service.last_death_time
+            self._checkpoint_service.mark_death()
         if combat_result.boss_victory:
             self.game_won = True
 
@@ -297,12 +304,7 @@ class GameEngine:
         return GameSnapshot(
             player=self._build_player_snapshot(),
             rooms={room_id: self._build_room_snapshot(room) for room_id, room in self.rooms.items()},
-            meta={
-                "checkpoint_room_id": self.checkpoint_room_id,
-                "checkpoint_time": self.checkpoint_time,
-                "last_death_time": self.last_death_time,
-                "last_respawn_time": self.last_respawn_time,
-            },
+            meta=self._checkpoint_service.to_meta(),
         )
 
     def _restore_room(self, snapshot: RoomSnapshot) -> Room:
@@ -346,13 +348,7 @@ class GameEngine:
             is_alive=player_snapshot.is_alive,
         )
 
-        self.checkpoint_room_id = snapshot.meta.get("checkpoint_room_id", "")
-        if self.checkpoint_room_id not in self.rooms:
-            self.checkpoint_room_id = self.player.current_room
-
-        self.checkpoint_time = snapshot.meta.get("checkpoint_time", "") or self._now_str()
-        self.last_death_time = snapshot.meta.get("last_death_time", "")
-        self.last_respawn_time = snapshot.meta.get("last_respawn_time", "")
+        self._checkpoint_service.apply_meta(snapshot.meta, self.rooms, self.player)
 
     def respawn(self) -> str:
         """复活"""
@@ -362,14 +358,9 @@ class GameEngine:
         if self.player.is_alive:
             return "你还活着，不需要复活。"
 
-        checkpoint_room_id = self._resolve_checkpoint_room()
-        if not checkpoint_room_id:
-            return "❌ 复活失败：当前没有可用检查点。"
-
-        self.player.current_room = checkpoint_room_id
-        self.player.hp = self.player.max_hp // 2
-        self.player.is_alive = True
-        self.last_respawn_time = self._now_str()
+        respawn_result = self._checkpoint_service.respawn(self.player, self.rooms)
+        if not respawn_result.success:
+            return f"❌ 复活失败：{respawn_result.error}"
 
         room = self.get_current_room()
         checkpoint_time = self.checkpoint_time or "未知时间"

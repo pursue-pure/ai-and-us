@@ -2,7 +2,7 @@
 import json
 import pytest
 from game.engine import GameEngine
-from game.models import Room, Item, Player
+from game.models import Room, Item, Player, Enemy
 
 
 class TestRoom:
@@ -120,6 +120,17 @@ class TestGameEngine:
         assert "回到检查点" in result
         assert checkpoint_time in result
 
+    def test_respawn_fails_without_available_checkpoint(self, engine):
+        engine.player.hp = 0
+        engine.player.is_alive = False
+        engine.rooms = {}
+        engine.checkpoint_room_id = ""
+
+        result = engine.respawn()
+
+        assert "复活失败" in result
+        assert "没有可用检查点" in result
+
     def test_load_restore_checkpoint_meta(self, engine, tmp_path):
         engine.move_player("north")
         save_file = tmp_path / "checkpoint_meta.json"
@@ -187,6 +198,58 @@ class TestGameEngine:
         item_names = [i.name for i in eng.rooms["room1"].items]
         assert "铁剑" not in item_names
         assert "生命药水" in item_names
+
+    def test_attack_enemy_defeat_boss_sets_game_won(self):
+        eng = GameEngine()
+        boss_room = Room(
+            id="boss_lair",
+            name="BOSS 房",
+            description="最终决战",
+            enemy=Enemy(name="远古巨龙", description="", hp=1, max_hp=100, attack=15, reward_xp=500),
+            is_boss_room=True,
+        )
+        eng.add_room(boss_room)
+        eng.create_player("测试", "boss_lair")
+
+        result = eng.attack_enemy()
+
+        assert eng.game_won is True
+        assert "游戏胜利" in result
+
+    def test_attack_enemy_player_dead_updates_last_death_time(self):
+        eng = GameEngine()
+        room = Room(
+            id="room1",
+            name="危险房间",
+            description="",
+            enemy=Enemy(name="兽人", description="", hp=100, max_hp=100, attack=50, reward_xp=60),
+        )
+        eng.add_room(room)
+        player = eng.create_player("测试", "room1")
+        player.hp = 10
+
+        result = eng.attack_enemy()
+
+        assert player.is_alive is False
+        assert eng.last_death_time != ""
+        assert "回档到检查点" in result
+
+    def test_save_game_updates_checkpoint_to_current_room(self, tmp_path):
+        eng = GameEngine()
+        room1 = Room(id="room1", name="房间 1", description="", exits={"north": "room2"})
+        room2 = Room(id="room2", name="房间 2", description="", exits={"south": "room1"})
+        eng.add_room(room1)
+        eng.add_room(room2)
+        eng.create_player("测试", "room1")
+        eng.move_player("north")
+
+        save_file = tmp_path / "save_with_checkpoint.json"
+        eng.save_game(str(save_file))
+
+        with open(save_file, "r", encoding="utf-8") as file:
+            data = json.load(file)
+
+        assert data["meta"]["checkpoint_room_id"] == "room2"
 
 
 class TestCommandHandler:
