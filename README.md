@@ -2,15 +2,58 @@
 
 一个基于控制台的文字冒险游戏，玩家进入洞穴探险，沿途收集物品、击败怪物，最终挑战远古巨龙。
 
-## 🎮 快速开始
+## 🛠️ 本地开发环境搭建
 
-```bash
-# 安装依赖
+### 1. 准备工作
+- **Python 版本**: 推荐使用 Python 3.10 或更高版本。
+- **虚拟环境 (推荐)**: 建议在项目根目录下创建并激活虚拟环境，以隔离依赖。
+  ```powershell
+  # Windows
+  python -m venv .venv
+  .\.venv\Scripts\activate
+  ```
+
+### 2. 安装依赖
+```powershell
 pip install -r requirements.txt
+```
 
-# 运行游戏
+### 3. 运行游戏
+```powershell
 python game/main.py
 ```
+
+### 4. 运行单元测试
+项目使用 `pytest` 进行回归保护，运行以下命令执行全量测试：
+```powershell
+python -m pytest
+```
+
+## 🏗️ 系统架构图
+
+项目遵循**分层架构**设计，模块关系如下：
+
+```mermaid
+graph TD
+    Main[game/main.py] --> Engine[game/engine.py]
+    Engine --> CombatService[game/services/combat_service.py]
+    Engine --> Repository[game/infrastructure/json_save_repository.py]
+    Engine --> Snapshot[game/snapshot.py]
+    Engine --> Models[game/models.py]
+    CombatService --> Models
+    Repository --> Snapshot
+    Snapshot --> Models
+```
+
+## 🧩 核心模块职责说明
+
+| 模块名称 | 职责描述 |
+| :--- | :--- |
+| **`GameEngine`** (`engine.py`) | **核心控制器**。管理游戏状态（房间、玩家、检查点）、处理移动逻辑、协调战斗与存储。 |
+| **`CombatService`** (`combat_service.py`) | **领域服务**。专注于战斗逻辑结算：伤害计算、经验发放、升级属性奖励、BOSS 战判定。 |
+| **`JsonSaveRepository`** (`json_save_repository.py`) | **基础设施层**。负责数据持久化，将 `GameSnapshot` 序列化为 JSON 文件或从中还原。 |
+| **`Models`** (`models.py`) | **领域模型**。定义 `Player`、`Room`、`Enemy` 等核心业务实体的属性与基础行为。 |
+| **`Snapshot`** (`snapshot.py`) | **数据传输对象 (DTO)**。定义用于序列化的快照结构，实现与领域模型之间的转换。 |
 
 ## 📖 游戏故事
 
