@@ -1,0 +1,64 @@
+{
+  "player": {
+    "name": "测试玩家",
+    "current_room": "room2",
+    "last_room": "room1",
+    "hp": 50,
+    "max_hp": 50,
+    "attack": 10,
+    "xp": 0,
+    "level": 1,
+    "is_alive": true,
+    "inventory": []
+  },
+  "meta": {
+    "checkpoint_room_id": "room2",
+    "checkpoint_time": "2026-04-30 13:46:49",
+    "last_death_time": "",
+    "last_respawn_time": ""
+  },
+  "rooms": {
+    "room1": {
+      "id": "room1",
+      "name": "房间 1",
+      "description": "描述 1",
+      "exits": {
+        "north": "room2"
+      },
+      "has_looked": false,
+      "is_boss_room": false,
+      "last_room": "",
+      "items": [],
+      "item_details": [],
+      "enemy_alive": null,
+      "enemy_hp": null,
+      "enemy_name": null,
+      "enemy_description": null,
+      "enemy_max_hp": null,
+      "enemy_attack": null,
+      "enemy_reward_xp": null,
+      "enemy": null
+    },
+    "room2": {
+      "id": "room2",
+      "name": "房间 2",
+      "description": "描述 2",
+      "exits": {
+        "south": "room1"
+      },
+      "has_looked": false,
+      "is_boss_room": false,
+      "last_room": "",
+      "items": [],
+      "item_details": [],
+      "enemy_alive": null,
+      "enemy_hp": null,
+      "enemy_name": null,
+      "enemy_description": null,
+      "enemy_max_hp": null,
+      "enemy_attack": null,
+      "enemy_reward_xp": null,
+      "enemy": null
+    }
+  }
+}

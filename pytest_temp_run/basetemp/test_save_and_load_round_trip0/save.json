@@ -1,0 +1,87 @@
+{
+  "player": {
+    "name": "测试玩家",
+    "current_room": "room1",
+    "last_room": "room0",
+    "hp": 40,
+    "max_hp": 50,
+    "attack": 12,
+    "xp": 30,
+    "level": 2,
+    "is_alive": true,
+    "inventory": [
+      {
+        "name": "铁剑",
+        "description": "一把剑",
+        "type": "weapon",
+        "effect": 8
+      }
+    ]
+  },
+  "meta": {
+    "checkpoint_room_id": "room1",
+    "checkpoint_time": "2026-04-15 10:00:00",
+    "last_death_time": "",
+    "last_respawn_time": ""
+  },
+  "rooms": {
+    "room1": {
+      "id": "room1",
+      "name": "房间 1",
+      "description": "描述 1",
+      "exits": {
+        "north": "room2"
+      },
+      "has_looked": true,
+      "is_boss_room": false,
+      "last_room": "",
+      "items": [
+        "药水"
+      ],
+      "item_details": [
+        {
+          "name": "药水",
+          "description": "恢复 HP",
+          "type": "potion",
+          "effect": 25
+        }
+      ],
+      "enemy_alive": false,
+      "enemy_hp": 0,
+      "enemy_name": "哥布林",
+      "enemy_description": "",
+      "enemy_max_hp": 20,
+      "enemy_attack": 5,
+      "enemy_reward_xp": 30,
+      "enemy": {
+        "name": "哥布林",
+        "description": "",
+        "hp": 0,
+        "max_hp": 20,
+        "attack": 5,
+        "reward_xp": 30
+      }
+    },
+    "room2": {
+      "id": "room2",
+      "name": "房间 2",
+      "description": "描述 2",
+      "exits": {
+        "south": "room1"
+      },
+      "has_looked": false,
+      "is_boss_room": false,
+      "last_room": "",
+      "items": [],
+      "item_details": [],
+      "enemy_alive": null,
+      "enemy_hp": null,
+      "enemy_name": null,
+      "enemy_description": null,
+      "enemy_max_hp": null,
+      "enemy_attack": null,
+      "enemy_reward_xp": null,
+      "enemy": null
+    }
+  }
+}

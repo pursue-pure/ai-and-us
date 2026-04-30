@@ -1,0 +1,80 @@
+{
+  "player": {
+    "name": "测试",
+    "current_room": "room1",
+    "last_room": "",
+    "hp": 50,
+    "max_hp": 50,
+    "attack": 10,
+    "xp": 0,
+    "level": 1,
+    "is_alive": true,
+    "inventory": [
+      {
+        "name": "铁剑",
+        "description": "一把剑",
+        "type": "weapon",
+        "effect": 8
+      }
+    ]
+  },
+  "meta": {
+    "checkpoint_room_id": "room1",
+    "checkpoint_time": "2026-04-30 13:46:49",
+    "last_death_time": "",
+    "last_respawn_time": ""
+  },
+  "rooms": {
+    "room1": {
+      "id": "room1",
+      "name": "房间1",
+      "description": "",
+      "exits": {
+        "north": "room2"
+      },
+      "has_looked": true,
+      "is_boss_room": false,
+      "last_room": "",
+      "items": [
+        "生命药水"
+      ],
+      "item_details": [
+        {
+          "name": "生命药水",
+          "description": "一瓶药水",
+          "type": "potion",
+          "effect": 25
+        }
+      ],
+      "enemy_alive": null,
+      "enemy_hp": null,
+      "enemy_name": null,
+      "enemy_description": null,
+      "enemy_max_hp": null,
+      "enemy_attack": null,
+      "enemy_reward_xp": null,
+      "enemy": null
+    },
+    "room2": {
+      "id": "room2",
+      "name": "房间2",
+      "description": "",
+      "exits": {
+        "south": "room1"
+      },
+      "has_looked": false,
+      "is_boss_room": false,
+      "last_room": "",
+      "items": [],
+      "item_details": [],
+      "enemy_alive": null,
+      "enemy_hp": null,
+      "enemy_name": null,
+      "enemy_description": null,
+      "enemy_max_hp": null,
+      "enemy_attack": null,
+      "enemy_reward_xp": null,
+      "enemy": null
+    }
+  }
+}
