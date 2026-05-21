@@ -1,0 +1,273 @@
+:root {
+  color-scheme: dark;
+  --bg: #101314;
+  --panel: #191d1f;
+  --panel-2: #202527;
+  --line: #354044;
+  --text: #f3efe7;
+  --muted: #b8c0b9;
+  --gold: #e8b95e;
+  --red: #e45d5d;
+  --green: #67c38b;
+  --cyan: #64c7d8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #252b2e;
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+
+button:hover {
+  border-color: var(--gold);
+  background: #30373a;
+  transform: translateY(-1px);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+}
+
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 390px;
+  min-height: 100vh;
+}
+
+.stage {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 16px;
+  padding: 24px;
+  border-right: 1px solid var(--line);
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 28px;
+  line-height: 1.15;
+}
+
+h2 {
+  margin-bottom: 8px;
+  font-size: 16px;
+}
+
+.topbar p,
+.status p,
+.room p {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+#mapCanvas {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #15191a;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(52px, 86px));
+  justify-content: center;
+  gap: 10px;
+}
+
+.controls button {
+  font-size: 20px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+  padding: 24px;
+  background: var(--panel);
+  overflow-y: auto;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2);
+  font-size: 26px;
+}
+
+.meter {
+  display: grid;
+  grid-template-columns: 34px 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.meter div {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #3a2525;
+}
+
+.meter i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--red), var(--gold), var(--green));
+}
+
+.enemy {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #6b3939;
+  border-radius: 8px;
+  background: #2a1d1d;
+  color: #ffd7d7;
+  line-height: 1.5;
+}
+
+.hidden {
+  display: none;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.chip {
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--text);
+}
+
+.chip.weapon {
+  border-color: var(--gold);
+}
+
+.chip.potion {
+  border-color: var(--green);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.command {
+  display: grid;
+  grid-template-columns: 1fr 72px;
+  gap: 8px;
+}
+
+.command input {
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #111516;
+  color: var(--text);
+}
+
+.log {
+  min-height: 150px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #111516;
+  color: #e9eee8;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+}
+
+@media (max-width: 920px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .stage {
+    min-height: 62vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .panel {
+    max-height: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .stage,
+  .panel {
+    padding: 16px;
+  }
+
+  .topbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .controls {
+    grid-template-columns: repeat(5, minmax(44px, 1fr));
+  }
+
+  .command {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,2 +1,5 @@
 # MUD 洞穴探险游戏依赖
+fastapi>=0.110.0
+httpx>=0.26.0
 pytest>=7.0.0
+uvicorn[standard]>=0.27.0

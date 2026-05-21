@@ -1,0 +1,14 @@
+.git
+.github
+.pytest_cache
+.tmp
+.tmp_pytest_run
+.venv
+pytest_temp_run
+__pycache__
+*.pyc
+*.pyo
+*.pdf
+*.save.json
+savegame*.json
+game_save*.json

@@ -1,6 +1,6 @@
 # MUD 洞穴探险游戏
 
-一个基于控制台的文字冒险游戏。玩家在洞穴中探索、拾取物品、进行回合制战斗，最终挑战远古巨龙。
+一个从控制台演进到 Web 图形界面的文字冒险游戏。玩家在洞穴中探索、拾取物品、进行回合制战斗，最终挑战远古巨龙。
 
 ## 游戏故事
 
@@ -27,17 +27,32 @@ pip install -r requirements.txt
 python game/main.py
 ```
 
-### 4. 运行单元测试
+### 4. 运行 Web 图形界面
+```powershell
+uvicorn game.api:app --reload
+```
+
+浏览器访问 `http://127.0.0.1:8000`。前端位于 `web/`，通过 RESTful API 调用后端业务逻辑。
+
+### 5. 运行单元测试与 API 集成测试
 项目使用 `pytest` 进行回归保护，运行以下命令执行全量测试：
 ```powershell
 python -m pytest
+```
+
+### 6. 构建 Docker 镜像
+```powershell
+docker build -t mud-cave-web .
+docker run --rm -p 8000:8000 mud-cave-web
 ```
 
 ## 系统架构图（模块关系）
 
 ```mermaid
 flowchart LR
-   U[玩家输入] --> C[CommandHandler]
+   U[CLI 玩家输入] --> C[CommandHandler]
+   W[Web Canvas UI] --> A[FastAPI REST API]
+   A --> E[GameEngine]
    C --> E[GameEngine]
    E --> M[models]
    E --> S1[CombatService]
@@ -91,13 +106,23 @@ python game/main.py
 pytest tests/ -v --tb=short
 ```
 
-说明：`pytest.ini` 已配置 `pythonpath = .` 与 `testpaths = tests`，可直接在仓库根目录执行。
+说明：`pytest.ini` 已配置 `pythonpath = .` 与 `testpaths = tests`，可直接在仓库根目录执行。`tests/test_api_integration.py` 覆盖 Web 前端依赖的 REST API 核心链路。
+
+### 6. 运行 Web 与容器
+
+```bash
+uvicorn game.api:app --reload
+docker build -t mud-cave-web .
+docker run --rm -p 8000:8000 mud-cave-web
+```
 
 ## 系统架构图（模块关系）
 
 ```mermaid
 flowchart LR
-   U[玩家输入] --> C[CommandHandler]
+   U[CLI 玩家输入] --> C[CommandHandler]
+   W[Web Canvas UI] --> A[FastAPI REST API]
+   A --> E[GameEngine]
    C --> E[GameEngine]
    E --> M[models]
    E --> S[CombatService]
@@ -105,6 +130,7 @@ flowchart LR
    E --> P[snapshot]
    R --> P
    T[pytest tests] --> C
+   T --> A
    T --> E
    T --> S
    T --> R
@@ -121,7 +147,24 @@ flowchart LR
 | 检查点服务层 | 负责检查点更新、死亡记录与复活流程 | `game/services/checkpoint_service.py` |
 | 持久化层 | 将快照保存为 JSON 并读取恢复 | `game/infrastructure/json_save_repository.py` |
 | 快照层 | 运行时对象与序列化结构之间的转换 | `game/snapshot.py` |
+| REST API 层 | 提供 Web 前端与后端业务逻辑的联调接口 | `game/api.py` |
+| Web 表现层 | 使用 Canvas 绘制地图并调用 REST API | `web/` |
+| 默认世界组装层 | 创建默认洞穴世界，供 CLI 与 API 复用 | `game/world.py` |
 | 启动组装层 | 创建默认世界并启动命令循环 | `game/main.py` |
+
+## REST API 快速说明
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/session` | 创建新游戏会话 |
+| `GET` | `/session/{session_id}` | 获取当前会话状态 |
+| `POST` | `/session/{session_id}/move` | 按方向移动 |
+| `POST` | `/session/{session_id}/look` | 搜索当前房间 |
+| `POST` | `/session/{session_id}/inventory/take` | 拾取物品 |
+| `POST` | `/session/{session_id}/inventory/use` | 使用物品 |
+| `POST` | `/session/{session_id}/attack` | 攻击当前敌人 |
+| `POST` | `/session/{session_id}/respawn` | 死亡后复活 |
+| `POST` | `/session/{session_id}/command` | 兼容原命令解析器 |
 
 ## 游戏目标
 
@@ -159,15 +202,16 @@ flowchart LR
 ## 测试与 CI
 
 - 单元测试目录：`tests/`
+- API 集成测试：`tests/test_api_integration.py`
 - 本地执行：`pytest tests/ -v --tb=short`
 - CI 文件：`.github/workflows/ci.yml`
 
 CI 在以下场景自动执行测试：
 
-- push 到 `main`、`develop`
+- push 到任意分支
 - pull request 到 `main`、`develop`
 
-并在 Python 3.10 / 3.11 / 3.12 三个版本矩阵下运行。
+并在 Python 3.10 / 3.11 / 3.12 三个版本矩阵下运行。CI 还会执行 Docker 镜像构建；非 PR 触发时会将镜像推送到 GHCR，镜像名由 `ghcr.io/<owner>/<repo>` 和提交 SHA 自动生成。
 
 ## 项目结构
 
@@ -179,18 +223,26 @@ ai-and-us/
 │   ├── engine.py
 │   ├── models.py
 │   ├── snapshot.py
+│   ├── api.py
+│   ├── world.py
 │   ├── services/
 │   │   ├── combat_service.py
 │   │   └── checkpoint_service.py
 │   └── infrastructure/
 │       └── json_save_repository.py
 ├── tests/
+│   ├── test_api_integration.py
 │   ├── test_checkpoint_service.py
 │   ├── test_engine.py
 │   ├── test_combat_service.py
 │   ├── test_json_save_repository.py
 │   └── test_snapshot.py
 ├── .github/workflows/ci.yml
+├── Dockerfile
+├── web/
+│   ├── index.html
+│   ├── styles.css
+│   └── app.js
 ├── pytest.ini
 ├── requirements.txt
 └── README.md
