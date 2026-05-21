@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MUD 洞穴探险</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="stage">
+        <header class="topbar">
+          <div>
+            <h1>MUD 洞穴探险</h1>
+            <p id="roomName">正在连接...</p>
+          </div>
+          <button id="newGameBtn" type="button">新局</button>
+        </header>
+
+        <canvas id="mapCanvas" width="960" height="520" aria-label="洞穴地图"></canvas>
+
+        <div class="controls" aria-label="移动控制">
+          <button data-move="north" type="button">↑</button>
+          <button data-move="west" type="button">←</button>
+          <button id="lookBtn" type="button">搜索</button>
+          <button data-move="east" type="button">→</button>
+          <button data-move="south" type="button">↓</button>
+        </div>
+      </section>
+
+      <aside class="panel">
+        <section class="status">
+          <div class="avatar">⚔️</div>
+          <div>
+            <h2 id="playerName">冒险者</h2>
+            <p id="playerMeta">LV.1 · 攻击 10 · 经验 0</p>
+          </div>
+        </section>
+
+        <div class="meter">
+          <span>HP</span>
+          <div><i id="hpBar"></i></div>
+          <strong id="hpText">50/50</strong>
+        </div>
+
+        <section class="room">
+          <h2>当前位置</h2>
+          <p id="roomDescription"></p>
+          <div id="enemyBox" class="enemy hidden"></div>
+        </section>
+
+        <section>
+          <h2>可见物品</h2>
+          <div id="itemList" class="chips"></div>
+        </section>
+
+        <section>
+          <h2>背包</h2>
+          <div id="inventoryList" class="chips"></div>
+        </section>
+
+        <section class="actions">
+          <button id="attackBtn" type="button">攻击</button>
+          <button id="respawnBtn" type="button">复活</button>
+          <button id="saveBtn" type="button">保存</button>
+          <button id="loadBtn" type="button">读取</button>
+        </section>
+
+        <form id="commandForm" class="command">
+          <input id="commandInput" autocomplete="off" placeholder="输入命令，如 take <铁剑>" />
+          <button type="submit">执行</button>
+        </form>
+
+        <pre id="log" class="log"></pre>
+      </aside>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

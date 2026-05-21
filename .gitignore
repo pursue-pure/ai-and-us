@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.venv/
 *.egg-info/
 dist/
 build/
@@ -12,7 +13,15 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
-.pytest_cache/
+pytest_temp_run/
+pytest_temp_current/
+pytest_temp*/
+pytest_verify*/
+pytest_verify_root*/
+
+# Local temp files
+.tmp/
+.tmp_*/
 
 # IDE
 .vscode/
